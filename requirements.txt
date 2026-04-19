@@ -1,0 +1,7 @@
+pandas
+financedatabase==2.2.3
+yfinance
+tqdm
+streamlit
+altair
+scipy
