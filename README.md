@@ -13,5 +13,12 @@ Create a Python env and install all required dependencies
 
 # Execute
 
+    # Sector dashboard
     python dashboard_sector_rotation.py
-    streamlit run dashboard_sector_rotation.py 
+    streamlit run dashboard_sector_rotation.py
+
+    # Industry listing with ETF suggestions
+    python industry_rotation.py "XLK"  # or sector name
+
+    # Industry dashboard with ETF charts
+    streamlit run industry_dashboard.py 
