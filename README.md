@@ -1,5 +1,9 @@
 ---
-# this repo enterains a to visualize sector etfs 
+# this repo enterains a tool to visualize the current stock trends
+# aims to help with spotting market rotations but also screening for breakouts
+# it presents the sectors, from there you can navigate to the industries of each sector
+# and finally go into the respective stocks
+
 ---
 
 # Setup
@@ -13,12 +17,9 @@ Create a Python env and install all required dependencies
 
 # Execute
 
-    # Sector dashboard
+    # Combined sector and industry dashboard
     python dashboard_sector_rotation.py
-    streamlit run dashboard_sector_rotation.py
+    streamlit run dashboard.py
 
     # Industry listing with ETF suggestions
-    python industry_rotation.py "XLK"  # or sector name
-
-    # Industry dashboard with ETF charts
-    streamlit run industry_dashboard.py 
+    python industry_rotation.py "XLK"  # or sector name 
