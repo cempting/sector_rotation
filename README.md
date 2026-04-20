@@ -1,25 +1,57 @@
----
-# this repo enterains a tool to visualize the current stock trends
-# aims to help with spotting market rotations but also screening for breakouts
-# it presents the sectors, from there you can navigate to the industries of each sector
-# and finally go into the respective stocks
+# Sector Rotation Screener
 
----
+This repo contains a Streamlit-based sector and industry dashboard for visualizing market rotations and screening equities by sector and industry.
 
-# Setup
-Create a Python env and install all required dependencies
+## Setup
+
+1. Create and activate a Python virtual environment:
 
     python -m venv env
     source env/bin/activate    # Linux/Mac
     # env\Scripts\activate     # Windows
 
+
+## Requirements
+
+The app depends on:
+
+- `pandas`
+- `financedatabase==2.2.3`
+- `yfinance`
+- `tqdm`
+- `streamlit`
+- `altair`
+- `scipy`
+- `matplotlib`
+- `pytest`
+- `watchdog`
+
+Install them with:
+
     pip install -r requirements.txt
 
-# Execute
 
-    # Combined sector and industry dashboard
-    python dashboard_sector_rotation.py
+3. Install `pytest` for tests if not already installed:
+
+    pip install pytest
+
+## Run the dashboard
+
+From the `sector_rotation/` directory, start the Streamlit app:
+
     streamlit run dashboard.py
 
-    # Industry listing with ETF suggestions
-    python industry_rotation.py "XLK"  # or sector name 
+This loads the current package layout with source code under `sector_rotation/src/`.
+
+## Run tests
+
+From the same directory, execute:
+
+    pytest
+
+
+## Notes
+
+- The project code is now located under `sector_rotation/src/`.
+- The `sector_rotation/dashboard.py` file is a package wrapper that exposes the app entry point.
+ 
