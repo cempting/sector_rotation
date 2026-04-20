@@ -73,7 +73,7 @@ def render_stock_chart(df: pd.DataFrame, ticker: str) -> None:
     ma150 = close.rolling(150).mean()
     bg_color, bar_color = get_trend_colors(ma50)
 
-    fig, ax1 = plt.subplots(figsize=(8, 3))
+    fig, ax1 = plt.subplots(figsize=(8, 4))
     fig.patch.set_facecolor(bg_color)
     ax1.set_facecolor(bg_color)
 

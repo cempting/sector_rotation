@@ -40,3 +40,43 @@ def test_render_stock_chart(monkeypatch):
 
     render_stock_chart(df, "AAPL")
     assert len(recorded) == 1
+
+
+def test_render_stock_chart_uses_taller_figure(monkeypatch):
+    recorded = []
+    monkeypatch.setattr("sector_rotation.src.charts.st.pyplot", lambda fig: recorded.append(fig))
+
+    df = pd.DataFrame(
+        {
+            "Close": [10, 11, 12, 13, 14, 15, 16, 17],
+            "Volume": [100, 110, 120, 130, 140, 150, 160, 170],
+        },
+        index=pd.date_range("2020-01-01", periods=8),
+    )
+
+    render_stock_chart(df, "MSFT")
+
+    assert len(recorded) == 1
+    width, height = recorded[0].get_size_inches()
+    assert width == 8
+    assert height == 4
+
+
+def test_render_stock_chart_plots_price_and_mas(monkeypatch):
+    recorded = []
+    monkeypatch.setattr("sector_rotation.src.charts.st.pyplot", lambda fig: recorded.append(fig))
+
+    df = pd.DataFrame(
+        {
+            "Close": list(range(1, 201)),
+            "Volume": [1000] * 200,
+        },
+        index=pd.date_range("2020-01-01", periods=200),
+    )
+
+    render_stock_chart(df, "NVDA")
+
+    assert len(recorded) == 1
+    # ax1 contains Price, 50 MA, and 150 MA lines.
+    ax1 = recorded[0].axes[0]
+    assert len(ax1.lines) == 3
