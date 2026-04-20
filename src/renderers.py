@@ -149,11 +149,21 @@ def render_industry_stock_page(sector: str, industry: str) -> None:
 
     st.write(f"Showing tickers {start_idx + 1}-{end_idx} of {len(all_tickers)} candidates")
 
+    # Add refresh button and status
+    refresh_key = f"refresh_{sector}_{industry}_page_{page}"
+    force_refresh = st.button("Refresh Data for This Page", key=refresh_key)
+    if force_refresh:
+        st.info("Forcing yfinance refresh for all tickers on this page...")
+    else:
+        st.caption("Using cached data where available. Click refresh to update from yfinance.")
+
     if page_tickers:
         page_results: dict[str, pd.DataFrame] = {}
         with st.status(f"Loading page {page}...") as status_container:
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                future_to_ticker = {executor.submit(fetch_ticker_data_batch, ticker): ticker for ticker in page_tickers}
+                future_to_ticker = {
+                    executor.submit(fetch_ticker_data_batch, ticker, force_refresh): ticker for ticker in page_tickers
+                }
                 for i, future in enumerate(concurrent.futures.as_completed(future_to_ticker)):
                     ticker, df = future.result()
                     page_results[ticker] = df
@@ -189,6 +199,9 @@ def render_sector_card(name: str, ticker: str) -> None:
         if st.button(f"View Industries for {name}", key=name):
             st.session_state.view = "industry"
             st.session_state.selected_sector = name
+            # Update sidebar state for sector selection
+            st.session_state["sidebar_selected_sector"] = name
+            st.session_state["sidebar_selected_industry"] = "No selection"
             st.rerun()
 
     render_data_card(

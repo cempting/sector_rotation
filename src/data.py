@@ -7,6 +7,7 @@ from .constants import (
     SECTOR_NAME_MAP,
     TICKER_PERIOD,
 )
+from .cache import load_ticker_from_cache, save_ticker_to_cache, clear_ticker_cache
 
 
 def get_db_sector_name(sector: str) -> str:
@@ -117,9 +118,18 @@ def validate_ticker_batch(ticker: str) -> tuple[str, bool]:
         return ticker, False
 
 
-def fetch_ticker_data_batch(ticker: str) -> tuple[str, pd.DataFrame]:
+def fetch_ticker_data_batch(ticker: str, force_refresh: bool = False) -> tuple[str, pd.DataFrame]:
+    """
+    Fetch ticker data, using cache unless force_refresh is True.
+    """
+    if not force_refresh:
+        cached = load_ticker_from_cache(ticker)
+        if cached is not None and not cached.empty:
+            return ticker, cached
     try:
         df = yf.download(ticker, period="6mo", progress=False)
+        if not df.empty:
+            save_ticker_to_cache(ticker, df)
         return ticker, df
     except Exception:
         return ticker, pd.DataFrame()
