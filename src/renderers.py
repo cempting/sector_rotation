@@ -68,53 +68,42 @@ def render_industry_dashboard(sector: str) -> None:
     selected_universe = st.session_state.get("selected_universe", "S&P 500")
     industries = get_universe_industries(selected_universe, sector)
 
-    def render_industry_item(industry: str) -> None:
-        tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
-        count = len(tickers)
+    if not industries:
+        st.write("No industries found.")
+        return
 
-        def nav_to_stock_list() -> None:
-            if st.button(f"View Stocks", key=f"stocks-{sector}-{industry}"):
-                st.session_state.view = "industry_stocks"
-                st.session_state.selected_sector = sector
-                st.session_state.selected_industry = industry
-                st.rerun()
+    columns = st.columns(INDUSTRY_GRID_COLS)
+    for i, industry in enumerate(industries):
+        with columns[i % INDUSTRY_GRID_COLS]:
+            tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
+            count = len(tickers)
 
-        if tickers:
-            avg_close, total_volume, num_fetched = compute_industry_aggregate(tickers)
-            metadata = f"({num_fetched}/{count} in universe)"
-            render_data_card(
-                title=industry,
-                close=avg_close,
-                volume=total_volume,
-                subtitle=f"{count} equities",
-                metadata=metadata,
-                chart_params={"y_label": "Index", "legend_label": "Index", "figsize": (4, 2.5)},
-                nav_action=nav_to_stock_list,
-            )
-        else:
-            st.subheader(industry)
-            st.write(f"{count} equities")
-            st.write("No tickers found.")
+            if tickers:
+                avg_close, total_volume, num_fetched = compute_industry_aggregate(tickers)
+                render_data_card(
+                    title=f"{industry} ({count})",
+                    close=avg_close,
+                    volume=total_volume,
+                    chart_params={"y_label": "Index", "legend_label": "Index", "figsize": (4, 2.5)},
+                    nav_action=lambda ind=industry: _nav_to_industry_stocks(sector, ind),
+                )
+            else:
+                st.subheader(f"{industry} ({count})")
+                st.caption("No data")
 
-    render_dashboard_grid(
-        title=f"Industry Screener - {sector}",
-        items=industries,
-        item_fetcher=render_industry_item,
-        cols=INDUSTRY_GRID_COLS,
-        back_nav=True,
-    )
+
+def _nav_to_industry_stocks(sector: str, industry: str) -> None:
+    if st.button(f"View Stocks", key=f"stocks-{sector}-{industry}"):
+        st.session_state.view = "industry_stocks"
+        st.session_state.selected_sector = sector
+        st.session_state.selected_industry = industry
+        st.rerun()
 
 
 def render_industry_stock_page(sector: str, industry: str) -> None:
-    st.title(f"{industry} Stocks - {sector}")
-
-    if st.button("Back to Industries"):
-        st.session_state.view = "industry"
-        st.rerun()
-
     selected_universe = st.session_state.get("selected_universe", "S&P 500")
     all_tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
-    st.write(f"Showing {len(all_tickers)} stocks in {selected_universe}.")
+    st.caption(f"{len(all_tickers)} stocks in {selected_universe}")
 
     stocks_per_page = st.number_input(
         "Stocks per page (multiple of 4)",
@@ -191,10 +180,10 @@ def render_sector_card(name: str, ticker: str) -> None:
     volume = df["Volume"].squeeze() if not df.empty else pd.Series()
 
     def nav_to_industry() -> None:
-        if st.button(f"View Industries for {name}", key=name):
+        if st.button(f"View Industries", key=name):
             st.session_state.view = "industry"
             st.session_state.selected_sector = name
-            # Do NOT set sidebar_selected_sector here to avoid StreamlitAPIException
+            st.session_state.pop("selected_industry", None)
             st.rerun()
 
     render_data_card(
