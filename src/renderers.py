@@ -12,6 +12,7 @@ from .data import (
     get_db_sector_name,
     load_equities,
 )
+from .universe import get_universe_tickers, get_universe_industries
 
 
 def safe_format(val):
@@ -64,12 +65,12 @@ def render_dashboard_grid(title: str, items: list, item_fetcher: callable,
 
 
 def render_industry_dashboard(sector: str) -> None:
-    industry_counts = fetch_industry_counts(sector)
-    industries = industry_counts.index.tolist()
+    selected_universe = st.session_state.get("selected_universe", "S&P 500")
+    industries = get_universe_industries(selected_universe, sector)
 
     def render_industry_item(industry: str) -> None:
-        count = industry_counts.get(industry, 0)
-        tickers = fetch_industry_tickers(sector, industry)
+        tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
+        count = len(tickers)
 
         def nav_to_stock_list() -> None:
             if st.button(f"View Stocks", key=f"stocks-{sector}-{industry}"):
@@ -80,7 +81,7 @@ def render_industry_dashboard(sector: str) -> None:
 
         if tickers:
             avg_close, total_volume, num_fetched = compute_industry_aggregate(tickers)
-            metadata = f"({num_fetched}/{count} fetched)"
+            metadata = f"({num_fetched}/{count} in universe)"
             render_data_card(
                 title=industry,
                 close=avg_close,
@@ -111,15 +112,9 @@ def render_industry_stock_page(sector: str, industry: str) -> None:
         st.session_state.view = "industry"
         st.rerun()
 
-    db_sector = get_db_sector_name(sector)
-    equities = load_equities()
-    selected = equities.select(sector=db_sector, industry=industry, exclude_exchanges=False)
-
-    if "market_cap" in selected.columns:
-        selected = selected.sort_values("market_cap", ascending=False)
-
-    all_tickers = sorted(selected.index.tolist())
-    st.write(f"Processing {len(all_tickers)} candidates...")
+    selected_universe = st.session_state.get("selected_universe", "S&P 500")
+    all_tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
+    st.write(f"Showing {len(all_tickers)} stocks in {selected_universe}.")
 
     stocks_per_page = st.number_input(
         "Stocks per page (multiple of 4)",
@@ -199,9 +194,7 @@ def render_sector_card(name: str, ticker: str) -> None:
         if st.button(f"View Industries for {name}", key=name):
             st.session_state.view = "industry"
             st.session_state.selected_sector = name
-            # Update sidebar state for sector selection
-            st.session_state["sidebar_selected_sector"] = name
-            st.session_state["sidebar_selected_industry"] = "No selection"
+            # Do NOT set sidebar_selected_sector here to avoid StreamlitAPIException
             st.rerun()
 
     render_data_card(

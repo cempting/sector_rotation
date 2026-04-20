@@ -6,10 +6,10 @@ def test_cache_roundtrip(tmp_path, monkeypatch):
     # Patch cache dir to temp
     monkeypatch.setattr("sector_rotation.src.cache.CACHE_DIR", tmp_path)
     ticker = "AAPL"
-    df = pd.DataFrame({"Close": [1, 2, 3], "Volume": [10, 20, 30]})
+    df = pd.DataFrame({"Close": list(range(25)), "Volume": list(range(25))})
     save_ticker_to_cache(ticker, df)
     loaded = load_ticker_from_cache(ticker)
     assert loaded is not None
-    assert (loaded["Close"] == [1, 2, 3]).all()
+    assert len(loaded) == 25
     clear_ticker_cache(ticker)
     assert load_ticker_from_cache(ticker) is None

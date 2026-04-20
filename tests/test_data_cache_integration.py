@@ -10,7 +10,7 @@ def test_fetch_ticker_data_batch_uses_cache(monkeypatch):
     calls = {}
     def fake_download(ticker, period, progress):
         calls["count"] = calls.get("count", 0) + 1
-        return pd.DataFrame({"Close": [1, 2, 3], "Volume": [10, 20, 30]})
+        return pd.DataFrame({"Close": list(range(25)), "Volume": list(range(25))})
     monkeypatch.setattr("sector_rotation.src.data.yf.download", fake_download)
     # First call: should call yf
     t, df1 = fetch_ticker_data_batch(ticker, force_refresh=True)

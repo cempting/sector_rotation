@@ -1,3 +1,6 @@
+import logging
+logging.getLogger("streamlit").setLevel(logging.ERROR)
+
 from src.dashboard import main
 
 

@@ -1,57 +1,66 @@
 # Sector Rotation Screener
 
-This repo contains a Streamlit-based sector and industry dashboard for visualizing market rotations and screening equities by sector and industry.
+A Streamlit dashboard for visualizing market sector/industry rotations and screening equities. Supports multiple stock universes (S&P 100, S&P 500, Russell 2000, STOXX Europe 600, Hang Seng) with drill-down from sector → industry → individual stocks.
 
 ## Setup
 
 1. Create and activate a Python virtual environment:
 
-    python -m venv env
-    source env/bin/activate    # Linux/Mac
-    # env\Scripts\activate     # Windows
+        python -m venv env
+        source env/bin/activate    # Linux/Mac
+        # env\Scripts\activate     # Windows
 
+2. Install dependencies:
 
-## Requirements
-
-The app depends on:
-
-- `pandas`
-- `financedatabase==2.2.3`
-- `yfinance`
-- `tqdm`
-- `streamlit`
-- `altair`
-- `scipy`
-- `matplotlib`
-- `pytest`
-- `watchdog`
-
-Install them with:
-
-    pip install -r requirements.txt
-
-
-3. Install `pytest` for tests if not already installed:
-
-    pip install pytest
+        pip install -r requirements.txt
 
 ## Run the dashboard
 
-From the `sector_rotation/` directory, start the Streamlit app:
-
-    streamlit run dashboard.py
-
-This loads the current package layout with source code under `sector_rotation/src/`.
+    streamlit run main.py
 
 ## Run tests
 
-From the same directory, execute:
-
     pytest
 
+## Project structure
 
-## Notes
+    sector_rotation/
+    ├── main.py                  # Streamlit entry point
+    ├── src/
+    │   ├── dashboard.py         # Main app layout and sidebar
+    │   ├── renderers.py         # Sector/industry/stock card rendering
+    │   ├── data.py              # Data fetchers (yfinance, financedatabase)
+    │   ├── cache.py             # Ticker cache (load/save/background update)
+    │   ├── universe.py          # Universe CSV loader (sectors, industries, tickers)
+    │   ├── charts.py            # Chart rendering helpers
+    │   └── constants.py         # Sector ETF map, layout constants
+    ├── ticker_universes/        # Stock universe CSV files
+    │   ├── fetch_universes.py   # Script to regenerate CSVs from online sources
+    │   ├── sp100.csv
+    │   ├── sp500.csv
+    │   ├── russell2000.csv
+    │   ├── stoxx600.csv
+    │   └── hangseng.csv
+    ├── data_cache/              # Local ticker data cache
+    └── tests/
 
-- The project code is now located under `sector_rotation/src/`.
-- The `sector_rotation/dashboard.py` file is a package wrapper that exposes the app entry point.
+## Stock universes
+
+The sidebar provides a dropdown to select a stock universe. Each universe is a CSV in `ticker_universes/` with columns: `Ticker, Name, Sector, Industry`. Selecting a universe drives the Sector and Industry dropdowns.
+
+**Built-in universes:**
+
+| Universe          | Source                              | Stocks |
+|-------------------|-------------------------------------|--------|
+| S&P 100           | Wikipedia                           | ~101   |
+| S&P 500           | Wikipedia                           | ~503   |
+| Russell 2000      | iShares IWM + financedatabase       | ~1,933 |
+| STOXX Europe 600  | Wikipedia                           | ~534   |
+| Hang Seng         | Wikipedia                           | ~85    |
+
+To refresh the CSVs from online sources:
+
+    cd ticker_universes && python fetch_universes.py
+
+**Custom universes:** Drop any CSV with `Ticker,Name,Sector,Industry` columns into `ticker_universes/` and it will appear in the sidebar dropdown automatically.
  

@@ -52,12 +52,18 @@ def fetch_industry_tickers(sector: str, industry: str, top_n: int = DEFAULT_TOP_
     equities = load_equities()
     selected = equities.select(sector=db_sector, industry=industry, exclude_exchanges=False)
 
+    # Defensive: ensure selected is a DataFrame
+    if not hasattr(selected, 'index'):
+        return []
+
     if "market_cap" in selected.columns:
         selected = selected.sort_values("market_cap", ascending=False)
 
+    from .cache import load_ticker_from_cache
     valid_tickers = []
     for ticker in selected.index:
-        if validate_ticker(ticker):
+        cached = load_ticker_from_cache(ticker)
+        if cached is not None and not cached.empty:
             valid_tickers.append(ticker)
             if len(valid_tickers) >= top_n:
                 break
@@ -70,10 +76,15 @@ def fetch_industry_stock_list(sector: str, industry: str) -> list[str]:
     equities = load_equities()
     selected = equities.select(sector=db_sector, industry=industry, exclude_exchanges=False)
 
+    # Defensive: ensure selected is a DataFrame
+    if not hasattr(selected, 'index'):
+        return []
+
     if "market_cap" in selected.columns:
         selected = selected.sort_values("market_cap", ascending=False)
 
-    return [ticker for ticker in selected.index if validate_ticker(ticker)]
+    from .cache import load_ticker_from_cache
+    return [ticker for ticker in selected.index if (load_ticker_from_cache(ticker) is not None and not load_ticker_from_cache(ticker).empty)]
 
 
 def compute_industry_aggregate(tickers: list[str]) -> tuple[pd.Series, pd.Series, int]:
@@ -82,18 +93,14 @@ def compute_industry_aggregate(tickers: list[str]) -> tuple[pd.Series, pd.Series
 
     closes = []
     volumes = []
-
     for ticker in tickers:
-        try:
-            df = yf.download(ticker, period="2y", progress=False)
-            if not df.empty and "Close" in df.columns and "Volume" in df.columns:
-                ticker_close = df["Close"]
-                ticker_volume = df["Volume"]
-                if not ticker_close.empty:
-                    closes.append(ticker_close)
-                    volumes.append(ticker_volume)
-        except Exception:
-            continue
+        _, df = fetch_ticker_data_batch(ticker, force_refresh=False)
+        if df is not None and not df.empty and "Close" in df.columns and "Volume" in df.columns:
+            ticker_close = df["Close"]
+            ticker_volume = df["Volume"]
+            if not ticker_close.empty:
+                closes.append(ticker_close)
+                volumes.append(ticker_volume)
 
     num_fetched = len(closes)
     if num_fetched == 0:
@@ -127,7 +134,7 @@ def fetch_ticker_data_batch(ticker: str, force_refresh: bool = False) -> tuple[s
         if cached is not None and not cached.empty:
             return ticker, cached
     try:
-        df = yf.download(ticker, period="6mo", progress=False)
+        df = yf.download(ticker, period=TICKER_PERIOD, progress=False)
         if not df.empty:
             save_ticker_to_cache(ticker, df)
         return ticker, df
