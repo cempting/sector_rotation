@@ -1,4 +1,3 @@
-
 import streamlit as st
 
 from .cache import clear_tickers_cache
@@ -10,7 +9,9 @@ from .renderers import (
     render_sector_card,
 )
 from .universe import (
+    get_sector_industry_counts,
     get_universe_industries,
+    get_universe_sector_stock_count,
     get_universe_sectors,
     get_universe_tickers,
     list_universes,
@@ -55,6 +56,21 @@ section[data-testid="stSidebar"] { display: none !important; }
     h3 { font-size: 0.9rem !important; }
     .stButton button { font-size: 0.8rem !important; padding: 0.3rem 0.5rem; }
 }
+
+.nav-hover-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    margin-top: 0.35rem;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    opacity: 0.8;
+    cursor: help;
+    user-select: none;
+}
 </style>
 """
 
@@ -90,6 +106,26 @@ def _on_industry_change() -> None:
         st.session_state.selected_industry = val
 
 
+def _sector_tooltip_details(universe: str, sector: str | None) -> list[str]:
+    if not sector or sector == "— all sectors —":
+        return ["Select a sector to see stock and industry details."]
+
+    counts = get_sector_industry_counts(universe, sector)
+    total = get_universe_sector_stock_count(universe, sector)
+    undef_count = counts.get("undefined", 0)
+    assigned = total - undef_count
+    details = [
+        f"Total stocks: {total}",
+        f"Classified: {assigned}",
+    ]
+    if undef_count:
+        details.append(f"Unclassified: {undef_count}")
+    for industry, count in counts.items():
+        label = "Unclassified" if industry == "undefined" else industry
+        details.append(f"{label}: {count}")
+    return details
+
+
 # ── top-nav bar ───────────────────────────────────────────────────────────────
 
 def _render_top_nav() -> str:
@@ -119,12 +155,22 @@ def _render_top_nav() -> str:
     st.session_state["nav_sector"] = current_sector if current_sector in sector_options else "— all sectors —"
 
     with nav_sector_col:
-        st.selectbox(
-            "Sector", sector_options,
-            key="nav_sector",
-            on_change=_on_sector_change,
-            label_visibility="collapsed",
-        )
+        sector_select_col, sector_info_col = st.columns([10, 1])
+        with sector_select_col:
+            st.selectbox(
+                "Sector", sector_options,
+                key="nav_sector",
+                on_change=_on_sector_change,
+                label_visibility="collapsed",
+            )
+        with sector_info_col:
+            selected_sector = st.session_state.get("nav_sector")
+            tooltip_details = _sector_tooltip_details(selected_universe, selected_sector)
+            with st.popover("i", help="Show sector details", use_container_width=True):
+                if selected_sector and selected_sector != "— all sectors —":
+                    st.markdown(f"**{selected_sector}**")
+                for detail in tooltip_details:
+                    st.caption(detail)
 
     with nav_industry_col:
         current_sector_val = st.session_state.get("nav_sector", "— all sectors —")
@@ -211,13 +257,34 @@ def main() -> None:
 
 def _render_universe_sector_card(universe: str, sector: str) -> None:
     """Render a sector card for a universe sector that has no ETF mapping."""
-    st.subheader(sector)
-    _render_sector_industry_summary(universe, sector)
-    if st.button("View Industries", key=f"universe-sector-{universe}-{sector}"):
+    def open_industry_view() -> None:
         st.session_state.view = "industry"
         st.session_state.selected_sector = sector
         st.session_state.pop("selected_industry", None)
-        st.rerun()
+
+    st.subheader(sector)
+    btn_col, info_col = st.columns([4, 1])
+    with btn_col:
+        st.button(
+            "View Industries",
+            key=f"universe-sector-{universe}-{sector}",
+            on_click=open_industry_view,
+            use_container_width=True,
+        )
+    with info_col:
+        counts = get_sector_industry_counts(universe, sector)
+        total = get_universe_sector_stock_count(universe, sector)
+        undef = counts.get("undefined", 0)
+        with st.popover("ⓘ", use_container_width=True):
+            st.markdown(f"**{sector}**")
+            st.caption(f"Total stocks: {total}")
+            st.caption(f"Classified: {total - undef}")
+            if undef:
+                st.caption(f"Unclassified: {undef}")
+            for industry, cnt in counts.items():
+                label = "Unclassified" if industry == "undefined" else industry
+                st.caption(f"{label}: {cnt}")
+
 
 
 if __name__ == "__main__":

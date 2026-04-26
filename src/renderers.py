@@ -95,11 +95,26 @@ def render_industry_dashboard(sector: str) -> None:
                     close=avg_close,
                     volume=total_volume,
                     chart_params={"y_label": "Index", "legend_label": "Index", "figsize": (4, 2.5)},
-                    nav_action=lambda ind=industry: _nav_to_industry_stocks(sector, ind),
                 )
             else:
                 st.subheader(f"{industry} ({count})")
                 st.caption("No data")
+
+            btn_col, info_col = st.columns([4, 1])
+            with btn_col:
+                st.button(
+                    "View Stocks",
+                    key=f"stocks-{sector}-{industry}",
+                    on_click=_open_industry_stocks,
+                    args=(sector, industry),
+                    use_container_width=True,
+                )
+            with info_col:
+                with st.popover("ⓘ", use_container_width=True):
+                    st.markdown(f"**{industry}**")
+                    st.caption(f"{count} stocks")
+                    for t in tickers:
+                        st.caption(t)
 
     # Unclassified group — shown after all named industries
     if undef_count:
@@ -108,15 +123,36 @@ def render_industry_dashboard(sector: str) -> None:
         with columns[col_idx]:
             st.subheader(f"Unclassified ({undef_count})")
             st.caption("No industry assigned")
-            _nav_to_industry_stocks(sector, 'undefined')
+            btn_col, info_col = st.columns([4, 1])
+            with btn_col:
+                st.button(
+                    "View Stocks",
+                    key=f"stocks-{sector}-undefined",
+                    on_click=_open_industry_stocks,
+                    args=(sector, "undefined"),
+                    use_container_width=True,
+                )
+            with info_col:
+                with st.popover("ⓘ", use_container_width=True):
+                    st.markdown("**Unclassified**")
+                    st.caption(f"{undef_count} stocks")
+                    for t in undef_tickers:
+                        st.caption(t)
+
+
+def _open_industry_stocks(sector: str, industry: str) -> None:
+    st.session_state.view = "industry_stocks"
+    st.session_state.selected_sector = sector
+    st.session_state.selected_industry = industry
 
 
 def _nav_to_industry_stocks(sector: str, industry: str) -> None:
-    if st.button(f"View Stocks", key=f"stocks-{sector}-{industry}"):
-        st.session_state.view = "industry_stocks"
-        st.session_state.selected_sector = sector
-        st.session_state.selected_industry = industry
-        st.rerun()
+    st.button(
+        "View Stocks",
+        key=f"stocks-{sector}-{industry}",
+        on_click=_open_industry_stocks,
+        args=(sector, industry),
+    )
 
 
 def _compute_stock_metrics(df: pd.DataFrame, ticker: str) -> dict:
@@ -347,46 +383,47 @@ def _render_sector_industry_summary(universe: str, sector: str) -> None:
 
 
 def render_sector_card(name: str, ticker: str) -> None:
+    def open_industry_view() -> None:
+        st.session_state.view = "industry"
+        st.session_state.selected_sector = name
+        st.session_state.pop("selected_industry", None)
+
     with st.spinner(f"Loading {name}..."):
         df = fetch_sector_data(ticker)
     close = df["Close"].squeeze() if not df.empty else pd.Series()
     volume = df["Volume"].squeeze() if not df.empty else pd.Series()
 
-    selected_universe = st.session_state.get("selected_universe", "S&P 500")
-    summary_sector = name
-    if not get_sector_industry_counts(selected_universe, name):
-        from .constants import SECTOR_NAME_MAP
-        long_name = SECTOR_NAME_MAP.get(name)
-        if long_name:
-            summary_sector = long_name
-
-    def nav_to_industry() -> None:
-        if st.button(f"View Industries", key=name):
-            st.session_state.view = "industry"
-            st.session_state.selected_sector = name
-            st.session_state.pop("selected_industry", None)
-            st.rerun()
-
     st.subheader(f"{name} ({ticker})")
-    chart_col, details_col = st.columns([1, 1])
+    if close.empty:
+        st.write("No data available.")
+    else:
+        ma50 = close.rolling(50).mean()
+        bg_color, bar_color = get_trend_colors(ma50)
+        render_chart(
+            close,
+            volume,
+            ma50,
+            bg_color,
+            bar_color,
+            y_label="Price",
+            legend_label="Price",
+            figsize=SECTOR_FIGSIZE,
+        )
 
-    with chart_col:
-        if close.empty:
-            st.write("No data available.")
-        else:
-            ma50 = close.rolling(50).mean()
-            bg_color, bar_color = get_trend_colors(ma50)
-            render_chart(
-                close,
-                volume,
-                ma50,
-                bg_color,
-                bar_color,
-                y_label="Price",
-                legend_label="Price",
-                figsize=SECTOR_FIGSIZE,
-            )
-        nav_to_industry()
-
-    with details_col:
-        _render_sector_industry_summary(selected_universe, summary_sector)
+    btn_col, info_col = st.columns([4, 1])
+    with btn_col:
+        st.button("View Industries", key=name, on_click=open_industry_view, use_container_width=True)
+    with info_col:
+        universe = st.session_state.get("selected_universe", "S&P 500")
+        counts = get_sector_industry_counts(universe, name)
+        total = get_universe_sector_stock_count(universe, name)
+        undef = counts.get("undefined", 0)
+        with st.popover("ⓘ", use_container_width=True):
+            st.markdown(f"**{name}**")
+            st.caption(f"Total stocks: {total}")
+            st.caption(f"Classified: {total - undef}")
+            if undef:
+                st.caption(f"Unclassified: {undef}")
+            for industry, cnt in counts.items():
+                label = "Unclassified" if industry == "undefined" else industry
+                st.caption(f"{label}: {cnt}")

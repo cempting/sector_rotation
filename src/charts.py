@@ -68,7 +68,11 @@ def render_sector_chart(df: pd.DataFrame, close: pd.Series, ma50: pd.Series, bg_
 
 def render_stock_chart(df: pd.DataFrame, ticker: str) -> None:
     close = df['Close'].squeeze()
+    if not isinstance(close, pd.Series):
+        close = pd.Series([close], index=df.index[-1:])
     volume = df['Volume'].squeeze()
+    if not isinstance(volume, pd.Series):
+        volume = pd.Series([volume], index=df.index[-1:])
     ma50 = close.rolling(50).mean()
     ma150 = close.rolling(150).mean()
     bg_color, bar_color = get_trend_colors(ma50)
