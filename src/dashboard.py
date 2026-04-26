@@ -1,27 +1,75 @@
 
 import streamlit as st
+
+from .cache import clear_tickers_cache
 from .constants import SECTOR_GRID_COLS, SECTORS
 from .renderers import (
+    _render_sector_industry_summary,
     render_industry_dashboard,
     render_industry_stock_page,
     render_sector_card,
 )
-from .cache import update_all_ticker_caches
-from .universe import list_universes, get_universe_sectors, get_universe_industries
+from .universe import (
+    get_universe_industries,
+    get_universe_sectors,
+    get_universe_tickers,
+    list_universes,
+)
+
+# ── mobile-friendly top-nav CSS ───────────────────────────────────────────────
+_TOP_NAV_CSS = """
+<style>
+/* hide default sidebar toggle and sidebar */
+[data-testid="collapsedControl"] { display: none !important; }
+section[data-testid="stSidebar"] { display: none !important; }
+
+/* remove Streamlit's default top spacing so controls sit at the top */
+[data-testid="stAppViewContainer"] .main .block-container {
+    padding-top: 0.2rem !important;
+}
+
+/* top-nav container */
+.top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    background: var(--background-color, #0e1117);
+    padding: 0.15rem 0 0.2rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 0.4rem;
+}
+
+/* compact selectbox labels */
+.top-nav .stSelectbox label {
+    font-size: 0.7rem !important;
+    margin-bottom: 0 !important;
+    opacity: 0.6;
+}
+
+/* tighter column gap inside the nav */
+.top-nav [data-testid="column"] { padding: 0 0.25rem; }
+
+/* smaller font for cards on narrow screens */
+@media (max-width: 640px) {
+    h2 { font-size: 1rem !important; }
+    h3 { font-size: 0.9rem !important; }
+    .stButton button { font-size: 0.8rem !important; padding: 0.3rem 0.5rem; }
+}
+</style>
+"""
 
 
-def _on_universe_change():
-    """Reset navigation when user switches universe."""
+# ── nav callbacks ─────────────────────────────────────────────────────────────
+
+def _on_universe_change() -> None:
     st.session_state.view = "sector"
-    for k in ("selected_sector", "selected_industry",
-              "sidebar_selected_sector", "sidebar_selected_industry"):
+    for k in ("selected_sector", "selected_industry", "nav_sector", "nav_industry"):
         st.session_state.pop(k, None)
 
 
-def _on_sidebar_sector_change():
-    """Navigate when user picks a sector in the sidebar."""
-    val = st.session_state.get("sidebar_selected_sector", "No selection")
-    if val == "No selection":
+def _on_sector_change() -> None:
+    val = st.session_state.get("nav_sector", "— all sectors —")
+    if val == "— all sectors —":
         st.session_state.view = "sector"
         st.session_state.pop("selected_sector", None)
         st.session_state.pop("selected_industry", None)
@@ -29,14 +77,12 @@ def _on_sidebar_sector_change():
         st.session_state.view = "industry"
         st.session_state.selected_sector = val
         st.session_state.pop("selected_industry", None)
-    # Reset industry widget for the new sector
-    st.session_state.pop("sidebar_selected_industry", None)
+    st.session_state.pop("nav_industry", None)
 
 
-def _on_sidebar_industry_change():
-    """Navigate when user picks an industry in the sidebar."""
-    val = st.session_state.get("sidebar_selected_industry", "No selection")
-    if val == "No selection":
+def _on_industry_change() -> None:
+    val = st.session_state.get("nav_industry", "— all industries —")
+    if val == "— all industries —":
         st.session_state.view = "industry"
         st.session_state.pop("selected_industry", None)
     else:
@@ -44,92 +90,117 @@ def _on_sidebar_industry_change():
         st.session_state.selected_industry = val
 
 
+# ── top-nav bar ───────────────────────────────────────────────────────────────
+
+def _render_top_nav() -> str:
+    """Render the sticky top navigation bar; returns selected_universe."""
+    st.markdown('<div class="top-nav">', unsafe_allow_html=True)
+
+    universes = list_universes()
+    view = st.session_state.get("view", "sector")
+    sector_nav = st.session_state.get("selected_sector")
+    industry_nav = st.session_state.get("selected_industry")
+
+    # ── one-row selectors: Universe · Sector · Industry · Refresh ────────────
+    nav_universe_col, nav_sector_col, nav_industry_col, nav_refresh_col = st.columns([3, 3, 3, 1])
+
+    with nav_universe_col:
+        selected_universe = st.selectbox(
+            "Universe", universes,
+            key="nav_universe",
+            on_change=_on_universe_change,
+            label_visibility="collapsed",
+        )
+    st.session_state.selected_universe = selected_universe
+
+    csv_sectors = get_universe_sectors(selected_universe)
+    sector_options = ["— all sectors —"] + csv_sectors
+    current_sector = st.session_state.get("selected_sector", "— all sectors —")
+    st.session_state["nav_sector"] = current_sector if current_sector in sector_options else "— all sectors —"
+
+    with nav_sector_col:
+        st.selectbox(
+            "Sector", sector_options,
+            key="nav_sector",
+            on_change=_on_sector_change,
+            label_visibility="collapsed",
+        )
+
+    with nav_industry_col:
+        current_sector_val = st.session_state.get("nav_sector", "— all sectors —")
+        if current_sector_val != "— all sectors —":
+            csv_industries = get_universe_industries(selected_universe, current_sector_val)
+            industry_options = ["— all industries —"] + csv_industries
+            current_industry = st.session_state.get("selected_industry", "— all industries —")
+            st.session_state["nav_industry"] = current_industry if current_industry in industry_options else "— all industries —"
+            st.selectbox(
+                "Industry", industry_options,
+                key="nav_industry",
+                on_change=_on_industry_change,
+                label_visibility="collapsed",
+            )
+        else:
+            st.selectbox(
+                "Industry", ["— all industries —"],
+                disabled=True,
+                label_visibility="collapsed",
+            )
+
+    with nav_refresh_col:
+        if view == "industry_stocks" and sector_nav and industry_nav:
+            refresh_tickers = get_universe_tickers(selected_universe, sector=sector_nav, industry=industry_nav)
+        elif view == "industry" and sector_nav:
+            refresh_tickers = get_universe_tickers(selected_universe, sector=sector_nav)
+        else:
+            refresh_tickers = get_universe_tickers(selected_universe)
+
+        if st.button("\U0001f504", key="nav_refresh", help="Refresh live data", use_container_width=True):
+            clear_tickers_cache(refresh_tickers)
+            st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+    return selected_universe
+
+
+# ── main ──────────────────────────────────────────────────────────────────────
+
 def main() -> None:
-    st.set_page_config(page_title="Sector Screener", layout="wide")
+    st.set_page_config(
+        page_title="Sector Screener",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
+    st.markdown(_TOP_NAV_CSS, unsafe_allow_html=True)
 
     if "view" not in st.session_state:
         st.session_state.view = "sector"
 
-    # Background cache update state
-    if "cache_update_started" not in st.session_state:
-        st.session_state.cache_update_started = False
-    if "cache_update_progress" not in st.session_state:
-        st.session_state.cache_update_progress = {"done": 0, "total": 0, "last": None}
+    selected_universe = _render_top_nav()
 
-    import threading
-    def cache_progress(done, total, last):
-        st.session_state.cache_update_progress = {"done": done, "total": total, "last": last}
+    # ── content ───────────────────────────────────────────────────────────────
+    view = st.session_state.get("view", "sector")
 
-    if not st.session_state.cache_update_started:
-        thread = threading.Thread(target=update_all_ticker_caches, args=(cache_progress,), daemon=True)
-        thread.start()
-        st.session_state.cache_update_started = True
-
-    with st.sidebar:
-        st.header("Quick Navigation")
-
-        # Universe selector
-        universes = list_universes()
-        selected_universe = st.selectbox(
-            "Stock Universe", universes, key="sidebar_universe",
-            on_change=_on_universe_change,
+    if (
+        view == "industry_stocks"
+        and "selected_sector" in st.session_state
+        and "selected_industry" in st.session_state
+    ):
+        render_industry_stock_page(
+            st.session_state.selected_sector,
+            st.session_state.selected_industry,
         )
-        st.session_state.selected_universe = selected_universe
-
-        # Cache status
-        prog = st.session_state.cache_update_progress
-        if prog["total"] > 0 and prog["done"] < prog["total"]:
-            st.caption(f"Cache: {prog['done']}/{prog['total']} — {prog['last']}")
-        elif prog["total"] > 0 and prog["done"] >= prog["total"]:
-            st.success("Cache update complete!")
-
-        # --- Sector dropdown ---
-        csv_sectors = get_universe_sectors(selected_universe)
-        sector_options = ["No selection"] + csv_sectors
-        nav_sector = st.session_state.get("selected_sector", "No selection")
-
-        # Force widget to match nav state before rendering
-        st.session_state["sidebar_selected_sector"] = nav_sector if nav_sector in sector_options else "No selection"
-
-        selected_sector = st.selectbox(
-            "Select Sector", sector_options,
-            key="sidebar_selected_sector",
-            on_change=_on_sidebar_sector_change,
-        )
-
-        # --- Industry dropdown ---
-        selected_industry = "No selection"
-        if selected_sector != "No selection":
-            csv_industries = get_universe_industries(selected_universe, selected_sector)
-            industry_options = ["No selection"] + csv_industries
-            nav_industry = st.session_state.get("selected_industry", "No selection")
-
-            # Force widget to match nav state before rendering
-            st.session_state["sidebar_selected_industry"] = nav_industry if nav_industry in industry_options else "No selection"
-
-            selected_industry = st.selectbox(
-                "Select Industry", industry_options,
-                key="sidebar_selected_industry",
-                on_change=_on_sidebar_industry_change,
-            )
-
-    # --- Content ---
-    if st.session_state.view == "industry_stocks" and "selected_sector" in st.session_state and "selected_industry" in st.session_state:
-        render_industry_stock_page(st.session_state.selected_sector, st.session_state.selected_industry)
-    elif st.session_state.view == "industry" and "selected_sector" in st.session_state:
+    elif view == "industry" and "selected_sector" in st.session_state:
         render_industry_dashboard(st.session_state.selected_sector)
     else:
-        selected_universe = st.session_state.get("selected_universe", "S&P 500")
         universe_sectors = get_universe_sectors(selected_universe)
-
         cols = st.columns(SECTOR_GRID_COLS)
         for i, sector_name in enumerate(universe_sectors):
             with cols[i % SECTOR_GRID_COLS]:
                 etf_ticker = SECTORS.get(sector_name)
                 if not etf_ticker:
                     from .constants import SECTOR_NAME_MAP
-                    for short, long in SECTOR_NAME_MAP.items():
-                        if long == sector_name:
+                    for short, long_name in SECTOR_NAME_MAP.items():
+                        if long_name == sector_name:
                             etf_ticker = SECTORS.get(short)
                             break
                 if etf_ticker:
@@ -139,12 +210,10 @@ def main() -> None:
 
 
 def _render_universe_sector_card(universe: str, sector: str) -> None:
-    """Render a sector card for a universe sector that has no ETF."""
-    from .universe import get_universe_industries
-    industries = get_universe_industries(universe, sector)
+    """Render a sector card for a universe sector that has no ETF mapping."""
     st.subheader(sector)
-    st.caption(f"{len(industries)} industries")
-    if st.button(f"View Industries", key=f"universe-sector-{universe}-{sector}"):
+    _render_sector_industry_summary(universe, sector)
+    if st.button("View Industries", key=f"universe-sector-{universe}-{sector}"):
         st.session_state.view = "industry"
         st.session_state.selected_sector = sector
         st.session_state.pop("selected_industry", None)

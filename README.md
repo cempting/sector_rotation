@@ -55,6 +55,8 @@ The sidebar provides a dropdown to select a stock universe. Each universe is a C
 | S&P 100           | Wikipedia                           | ~101   |
 | S&P 500           | Wikipedia                           | ~503   |
 | Russell 2000      | iShares IWM + financedatabase       | ~1,933 |
+| NASDAQ            | financedatabase (NMS/NGM/NCM)       | ~7,875 |
+| NYSE              | financedatabase (NYQ)               | ~3,543 |
 | STOXX Europe 600  | Wikipedia                           | ~534   |
 | Hang Seng         | Wikipedia                           | ~85    |
 

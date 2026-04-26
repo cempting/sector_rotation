@@ -9,6 +9,8 @@ _BUILTIN_UNIVERSES = {
     'S&P 100': 'sp100.csv',
     'S&P 500': 'sp500.csv',
     'Russell 2000': 'russell2000.csv',
+    'NASDAQ': 'nasdaq.csv',
+    'NYSE': 'nyse.csv',
     'STOXX Europe 600': 'stoxx600.csv',
     'Hang Seng': 'hangseng.csv',
 }
@@ -85,4 +87,35 @@ def get_universe_tickers(universe_name: str, sector: str | None = None,
     if industry:
         df = df[df['Industry'] == industry]
     return df['Ticker'].tolist()
+
+
+def get_universe_stock_name(universe_name: str, ticker: str) -> str:
+    """Return the company name for a ticker in a universe."""
+    df = load_universe(universe_name)
+    match = df.loc[df['Ticker'] == ticker, 'Name']
+    if match.empty:
+        return ticker
+    name = str(match.iloc[0]).strip()
+    return name or ticker
+
+
+def get_sector_industry_counts(universe_name: str, sector: str) -> dict[str, int]:
+    """Return {industry: stock_count} for all industries in a sector.
+
+    'undefined' entries appear last if present.
+    """
+    df = load_universe(universe_name)
+    df = df[df['Sector'] == sector]
+    counts = df.groupby('Industry', sort=False).size().to_dict()
+    # Sort alphabetically, undefined last
+    sorted_counts = dict(
+        sorted(counts.items(), key=lambda kv: (kv[0] == 'undefined', kv[0]))
+    )
+    return sorted_counts
+
+
+def get_universe_sector_stock_count(universe_name: str, sector: str) -> int:
+    """Return total number of stocks in a sector."""
+    df = load_universe(universe_name)
+    return int((df['Sector'] == sector).sum())
 

@@ -59,3 +59,9 @@ def clear_ticker_cache(ticker: str) -> None:
     path = _ticker_cache_path(ticker)
     if path.exists():
         path.unlink()
+
+
+def clear_tickers_cache(tickers: list) -> None:
+    """Clear cache for a list of tickers."""
+    for ticker in tickers:
+        clear_ticker_cache(ticker)

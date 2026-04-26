@@ -57,6 +57,8 @@ sp100_merged = sp100_wiki[["Ticker", "Name"]].merge(
 if "Sector" in sp100_wiki.columns:
     mask = sp100_merged["Sector"].isna()
     sp100_merged.loc[mask, "Sector"] = sp100_wiki.loc[mask, "Sector"].values if mask.any() else None
+sp100_merged["Sector"] = sp100_merged["Sector"].fillna("undefined").str.strip().replace("", "undefined")
+sp100_merged["Industry"] = sp100_merged["Industry"].fillna("undefined").str.strip().replace("", "undefined")
 sp100_merged = sp100_merged[["Ticker", "Name", "Sector", "Industry"]].sort_values("Ticker").reset_index(drop=True)
 sp100_merged.to_csv(os.path.join(OUT_DIR, "sp100.csv"), index=False)
 print(f"  Wrote {len(sp100_merged)} rows to sp100.csv")
@@ -94,6 +96,8 @@ fdb = fdb[["Ticker", "FDB_Sector", "FDB_Industry"]].drop_duplicates(subset="Tick
 # Merge IWM tickers with financedatabase industries
 russell = iwm[["Ticker", "Name", "Sector"]].merge(fdb[["Ticker", "FDB_Industry"]], on="Ticker", how="left")
 russell = russell.rename(columns={"FDB_Industry": "Industry"})
+russell["Sector"] = russell["Sector"].fillna("undefined").str.strip().replace("", "undefined")
+russell["Industry"] = russell["Industry"].fillna("undefined").str.strip().replace("", "undefined")
 russell = russell[["Ticker", "Name", "Sector", "Industry"]].sort_values("Ticker").reset_index(drop=True)
 russell.to_csv(os.path.join(OUT_DIR, "russell2000.csv"), index=False)
 print(f"  Wrote {len(russell)} rows to russell2000.csv")
@@ -147,5 +151,37 @@ hsi["Industry"] = hsi["Sector"]
 hsi = hsi[["Ticker", "Name", "Sector", "Industry"]].sort_values("Ticker").reset_index(drop=True)
 hsi.to_csv(os.path.join(OUT_DIR, "hangseng.csv"), index=False)
 print(f"  Wrote {len(hsi)} rows to hangseng.csv")
+
+# ---------- NASDAQ ----------
+print("Fetching NASDAQ-listed equities from financedatabase...")
+# financedatabase already loaded above; select exchange = NMS (NASDAQ Market System) / NGM / NCM
+eq_all = eq.select()
+eq_all = eq_all.reset_index().rename(columns={
+    "symbol": "Ticker", "name": "Name",
+    "sector": "Sector", "industry": "Industry", "exchange": "Exchange"
+})
+nasdaq_exchanges = {"NMS", "NGM", "NCM"}  # NASDAQ Global Select, Global Market, Capital Market
+nasdaq = eq_all[eq_all["Exchange"].isin(nasdaq_exchanges)].copy()
+nasdaq = nasdaq[nasdaq["Ticker"].notna() & (nasdaq["Ticker"].str.strip() != "")]
+nasdaq = nasdaq[["Ticker", "Name", "Sector", "Industry"]].copy()
+nasdaq["Ticker"] = nasdaq["Ticker"].str.strip()
+nasdaq["Sector"] = nasdaq["Sector"].fillna("undefined").str.strip().replace("", "undefined")
+nasdaq["Industry"] = nasdaq["Industry"].fillna("undefined").str.strip().replace("", "undefined")
+nasdaq = nasdaq.sort_values("Ticker").reset_index(drop=True)
+nasdaq.to_csv(os.path.join(OUT_DIR, "nasdaq.csv"), index=False)
+print(f"  Wrote {len(nasdaq)} rows to nasdaq.csv")
+
+# ---------- NYSE ----------
+print("Fetching NYSE-listed equities from financedatabase...")
+nyse_exchanges = {"NYQ", "NYSEArca", "NGM"}
+nyse = eq_all[eq_all["Exchange"] == "NYQ"].copy()
+nyse = nyse[nyse["Ticker"].notna() & (nyse["Ticker"].str.strip() != "")]
+nyse = nyse[["Ticker", "Name", "Sector", "Industry"]].copy()
+nyse["Ticker"] = nyse["Ticker"].str.strip()
+nyse["Sector"] = nyse["Sector"].fillna("undefined").str.strip().replace("", "undefined")
+nyse["Industry"] = nyse["Industry"].fillna("undefined").str.strip().replace("", "undefined")
+nyse = nyse.sort_values("Ticker").reset_index(drop=True)
+nyse.to_csv(os.path.join(OUT_DIR, "nyse.csv"), index=False)
+print(f"  Wrote {len(nyse)} rows to nyse.csv")
 
 print("Done!")

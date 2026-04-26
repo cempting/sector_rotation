@@ -1,4 +1,3 @@
-import concurrent.futures
 import streamlit as st
 import pandas as pd
 import yfinance as yf
@@ -13,7 +12,7 @@ from .data import (
     get_db_sector_name,
     load_equities,
 )
-from .universe import get_universe_tickers, get_universe_industries
+from .universe import get_universe_tickers, get_universe_industries, get_sector_industry_counts, get_universe_sector_stock_count, get_universe_stock_name
 
 
 def safe_format(val):
@@ -67,11 +66,20 @@ def render_dashboard_grid(title: str, items: list, item_fetcher: callable,
 
 def render_industry_dashboard(sector: str) -> None:
     selected_universe = st.session_state.get("selected_universe", "S&P 500")
-    industries = get_universe_industries(selected_universe, sector)
+    counts = get_sector_industry_counts(selected_universe, sector)
+    industries = [ind for ind in counts if ind != 'undefined']
+    undef_count = counts.get('undefined', 0)
+    total = sum(counts.values())
 
-    if not industries:
+    if not counts:
         st.write("No industries found.")
         return
+
+    # Header summary
+    st.caption(
+        f"**{total} stocks** total — {len(industries)} industries"
+        + (f" · **{undef_count} unclassified**" if undef_count else "")
+    )
 
     columns = st.columns(INDUSTRY_GRID_COLS)
     for i, industry in enumerate(industries):
@@ -80,7 +88,8 @@ def render_industry_dashboard(sector: str) -> None:
             count = len(tickers)
 
             if tickers:
-                avg_close, total_volume, num_fetched = compute_industry_aggregate(tickers)
+                with st.spinner(f"Building {industry} aggregate..."):
+                    avg_close, total_volume, num_fetched = compute_industry_aggregate(tickers)
                 render_data_card(
                     title=f"{industry} ({count})",
                     close=avg_close,
@@ -91,6 +100,15 @@ def render_industry_dashboard(sector: str) -> None:
             else:
                 st.subheader(f"{industry} ({count})")
                 st.caption("No data")
+
+    # Unclassified group — shown after all named industries
+    if undef_count:
+        undef_tickers = get_universe_tickers(selected_universe, sector=sector, industry='undefined')
+        col_idx = len(industries) % INDUSTRY_GRID_COLS
+        with columns[col_idx]:
+            st.subheader(f"Unclassified ({undef_count})")
+            st.caption("No industry assigned")
+            _nav_to_industry_stocks(sector, 'undefined')
 
 
 def _nav_to_industry_stocks(sector: str, industry: str) -> None:
@@ -176,91 +194,171 @@ def _format_fundamental(val, is_pct=False):
         return "N/A"
 
 
+def _render_stock_details_panel(metrics: dict, company_name: str, ticker: str) -> None:
+    """Render a compact 3-column details panel sized to sit beside the chart."""
+    price = f"${metrics.get('latest', 0):.2f}"
+    change = f"{metrics.get('change_20d_pct', 0):+.1f}%"
+    detail_items = [
+        ("Price", price, change),
+        ("Vol (20D)", f"{metrics.get('volatility_20d', 0):.1f}%", ""),
+        ("Market Cap", _format_fundamental(metrics.get('market_cap')), ""),
+        ("P/E", _format_fundamental(metrics.get('pe_ratio')), ""),
+        ("P/B", _format_fundamental(metrics.get('pb_ratio')), ""),
+        ("EPS (TTM)", _format_fundamental(metrics.get('eps_trailing')), ""),
+        ("ROE", _format_fundamental(metrics.get('roe'), is_pct=True), ""),
+        ("Div Yield", _format_fundamental(metrics.get('dividend_yield'), is_pct=True), ""),
+        ("Debt/Eq", _format_fundamental(metrics.get('debt_to_equity')), ""),
+    ]
+
+    st.markdown(
+        """
+        <style>
+        .stock-details-panel {
+            display: block;
+        }
+        .stock-details-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.22rem;
+            grid-auto-rows: auto;
+        }
+        .stock-details-name {
+            border: 1px solid rgba(128, 128, 128, 0.25);
+            border-radius: 0.5rem;
+            padding: 0.35rem 0.45rem;
+            margin-bottom: 0.3rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .stock-details-name-label {
+            font-size: 0.65rem;
+            line-height: 1.1;
+            opacity: 0.72;
+            margin-bottom: 0.18rem;
+        }
+        .stock-details-name-value {
+            font-size: 0.82rem;
+            line-height: 1.2;
+            font-weight: 600;
+            word-break: break-word;
+        }
+        .stock-details-card {
+            border: 1px solid rgba(128, 128, 128, 0.25);
+            border-radius: 0.5rem;
+            padding: 0.2rem 0.28rem;
+            min-height: 2.55rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .stock-details-label {
+            font-size: 0.56rem;
+            line-height: 1.02;
+            opacity: 0.72;
+            margin-bottom: 0.07rem;
+        }
+        .stock-details-value {
+            font-size: 0.76rem;
+            line-height: 1.04;
+            font-weight: 600;
+            word-break: break-word;
+        }
+        .stock-details-delta {
+            font-size: 0.56rem;
+            line-height: 1.0;
+            opacity: 0.8;
+            margin-top: 0.05rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    cards = []
+    for label, value, delta in detail_items:
+        delta_html = f'<div class="stock-details-delta">{delta}</div>' if delta else ""
+        cards.append(
+            f'<div class="stock-details-card">'
+            f'<div class="stock-details-label">{label}</div>'
+            f'<div class="stock-details-value">{value}</div>'
+            f'{delta_html}'
+            f'</div>'
+        )
+
+    st.markdown(
+        (
+            '<div class="stock-details-panel">'
+            '<div class="stock-details-name">'
+            '<div class="stock-details-name-label">Company</div>'
+            f'<div class="stock-details-name-value">{company_name} ({ticker})</div>'
+            '</div>'
+            f'<div class="stock-details-grid">{"".join(cards)}</div>'
+            '</div>'
+        ),
+        unsafe_allow_html=True,
+    )
+
+
 def render_industry_stock_page(sector: str, industry: str) -> None:
     selected_universe = st.session_state.get("selected_universe", "S&P 500")
     all_tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
     st.caption(f"{len(all_tickers)} stocks in {selected_universe}")
-
-    # Load stock data once, then render a consolidated snapshot per card.
-    with st.status(f"Loading all {len(all_tickers)} stocks...") as analysis_status:
-        all_results: dict[str, pd.DataFrame] = {}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            future_to_ticker = {
-                executor.submit(fetch_ticker_data_batch, ticker, False): ticker for ticker in all_tickers
-            }
-            for i, future in enumerate(concurrent.futures.as_completed(future_to_ticker)):
-                ticker, df = future.result()
-                all_results[ticker] = df
-                analysis_status.update(label=f"Loaded {i+1}/{len(all_tickers)} stocks...")
     
-    # --- Individual Stock Charts (2 per row for larger display) ---
-    st.subheader("Individual Stock Charts")
-    
-    stocks_per_page = st.number_input(
-        "Stocks per page (multiple of 2)",
-        min_value=2,
-        max_value=100,
-        value=10,
-        step=2,
-        key=f"stocks_per_page_{sector}_{industry}"
-    )
-    total_pages = (len(all_tickers) + stocks_per_page - 1) // stocks_per_page
-
-    if total_pages > 1:
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            page = st.selectbox(
-                "Page",
-                options=list(range(1, total_pages + 1)),
-                format_func=lambda x: f"Page {x} of {total_pages} ({len(all_tickers)} total stocks)",
-                key=f"page_{sector}_{industry}"
-            )
-    else:
-        page = 1
-
-    start_idx = (page - 1) * stocks_per_page
-    end_idx = min(start_idx + stocks_per_page, len(all_tickers))
-    page_tickers = all_tickers[start_idx:end_idx]
-
-    st.caption(f"Showing {start_idx + 1}-{end_idx} of {len(all_tickers)} stocks")
-
     # Display stocks in 2-column layout for larger charts
-    for row_start in range(0, len(page_tickers), 2):
-        row_tickers = page_tickers[row_start:row_start + 2]
+    for row_start in range(0, len(all_tickers), 2):
+        row_tickers = all_tickers[row_start:row_start + 2]
         cols = st.columns(2)
         for col_idx, ticker in enumerate(row_tickers):
-            df = all_results.get(ticker, pd.DataFrame())
             with cols[col_idx]:
-                st.subheader(f"{ticker}")
+                with st.spinner(f"Loading {ticker}..."):
+                    _, df = fetch_ticker_data_batch(ticker, False)
+                    metrics = _compute_stock_metrics(df, ticker) if not df.empty else {}
+                    company_name = get_universe_stock_name(selected_universe, ticker)
                 if df.empty or "Close" not in df.columns or "Volume" not in df.columns:
-                    st.write("No data available for this stock.")
+                    st.write(f"{ticker} could not be loaded")
                     continue
 
-                render_stock_chart(df, ticker)
-                metrics = _compute_stock_metrics(df, ticker)
-                if metrics:
-                    st.caption("Snapshot")
-                    snapshot_cols = st.columns(3)
-                    with snapshot_cols[0]:
-                        st.metric("Price", f"${metrics.get('latest', 0):.2f}", f"{metrics.get('change_20d_pct', 0):+.1f}%")
-                        st.metric("P/E", _format_fundamental(metrics.get('pe_ratio')))
-                        st.metric("ROE", _format_fundamental(metrics.get('roe'), is_pct=True))
-                    with snapshot_cols[1]:
-                        st.metric("Vol (20D)", f"{metrics.get('volatility_20d', 0):.1f}%")
-                        st.metric("Div Yield", _format_fundamental(metrics.get('dividend_yield'), is_pct=True))
-                        st.metric("Debt/Eq", _format_fundamental(metrics.get('debt_to_equity')))
-                    with snapshot_cols[2]:
-                        st.metric("Market Cap", _format_fundamental(metrics.get('market_cap')))
-                        st.metric("EPS (TTM)", _format_fundamental(metrics.get('eps_trailing')))
-                        st.metric("P/B", _format_fundamental(metrics.get('pb_ratio')))
+                # Keep graph and details equally wide for balanced screen usage.
+                chart_col, details_col = st.columns([1, 1])
+                with chart_col:
+                    render_stock_chart(df, ticker)
 
-    st.success(f"✓ Page {page} complete! Displayed {len(page_tickers)} stocks")
+                with details_col:
+                    if metrics:
+                        _render_stock_details_panel(metrics, company_name, ticker)
+                    else:
+                        st.caption("No snapshot metrics available.")
+
+    st.success(f"✓ Complete! Displayed all {len(all_tickers)} stocks")
+
+
+def _render_sector_industry_summary(universe: str, sector: str) -> None:
+    """Render a compact stock-count summary broken down by industry."""
+    counts = get_sector_industry_counts(universe, sector)
+    total = sum(counts.values())
+    undef_count = counts.get('undefined', 0)
+    assigned = total - undef_count
+
+    st.caption(f"**{total} stocks** · {assigned} classified · {undef_count} unclassified")
+
+    if counts:
+        rows = []
+        for industry, cnt in counts.items():
+            label = "_(unclassified)_" if industry == 'undefined' else industry
+            rows.append(f"- {label}: **{cnt}**")
+        st.markdown("\n".join(rows))
 
 
 def render_sector_card(name: str, ticker: str) -> None:
-    df = fetch_sector_data(ticker)
+    with st.spinner(f"Loading {name}..."):
+        df = fetch_sector_data(ticker)
     close = df["Close"].squeeze() if not df.empty else pd.Series()
     volume = df["Volume"].squeeze() if not df.empty else pd.Series()
+
+    selected_universe = st.session_state.get("selected_universe", "S&P 500")
+    summary_sector = name
+    if not get_sector_industry_counts(selected_universe, name):
+        from .constants import SECTOR_NAME_MAP
+        long_name = SECTOR_NAME_MAP.get(name)
+        if long_name:
+            summary_sector = long_name
 
     def nav_to_industry() -> None:
         if st.button(f"View Industries", key=name):
@@ -269,10 +367,26 @@ def render_sector_card(name: str, ticker: str) -> None:
             st.session_state.pop("selected_industry", None)
             st.rerun()
 
-    render_data_card(
-        title=f"{name} ({ticker})",
-        close=close,
-        volume=volume,
-        chart_params={"y_label": "Price", "legend_label": "Price", "figsize": SECTOR_FIGSIZE},
-        nav_action=nav_to_industry,
-    )
+    st.subheader(f"{name} ({ticker})")
+    chart_col, details_col = st.columns([1, 1])
+
+    with chart_col:
+        if close.empty:
+            st.write("No data available.")
+        else:
+            ma50 = close.rolling(50).mean()
+            bg_color, bar_color = get_trend_colors(ma50)
+            render_chart(
+                close,
+                volume,
+                ma50,
+                bg_color,
+                bar_color,
+                y_label="Price",
+                legend_label="Price",
+                figsize=SECTOR_FIGSIZE,
+            )
+        nav_to_industry()
+
+    with details_col:
+        _render_sector_industry_summary(selected_universe, summary_sector)
