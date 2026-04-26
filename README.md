@@ -65,4 +65,21 @@ To refresh the CSVs from online sources:
     cd ticker_universes && python fetch_universes.py
 
 **Custom universes:** Drop any CSV with `Ticker,Name,Sector,Industry` columns into `ticker_universes/` and it will appear in the sidebar dropdown automatically.
+
+## Onboarding new markets (generic)
+
+The app now uses a market-aware configuration model in `src/constants.py`:
+
+- `BUILTIN_UNIVERSE_FILES`: display name -> CSV filename
+- `UNIVERSE_MARKET`: universe name -> market key (for example `us`, `eu`, `asia`)
+- `MARKET_SECTOR_CONFIG`: market key -> sector proxy mapping and optional alias map
+- `resolve_sector_proxy_ticker(...)`: resolves each sector to the right ETF/index proxy for that market
+
+To add a new market (for example Australia, South America, Africa):
+
+1. Add the universe CSV file under `ticker_universes/`.
+2. Register the universe name in `BUILTIN_UNIVERSE_FILES`.
+3. Add/assign a market key in `UNIVERSE_MARKET`.
+4. Add the market's sector proxy map in `MARKET_SECTOR_CONFIG`.
+5. Validate resolution coverage by checking all sectors in that universe resolve to a proxy.
  

@@ -2,18 +2,9 @@ import os
 import functools
 import pandas as pd
 
-UNIVERSE_DIR = os.path.join(os.path.dirname(__file__), '..', 'ticker_universes')
+from .constants import BUILTIN_UNIVERSE_FILES
 
-# Maps display name -> csv filename
-_BUILTIN_UNIVERSES = {
-    'S&P 100': 'sp100.csv',
-    'S&P 500': 'sp500.csv',
-    'Russell 2000': 'russell2000.csv',
-    'NASDAQ': 'nasdaq.csv',
-    'NYSE': 'nyse.csv',
-    'STOXX Europe 600': 'stoxx600.csv',
-    'Hang Seng': 'hangseng.csv',
-}
+UNIVERSE_DIR = os.path.join(os.path.dirname(__file__), '..', 'ticker_universes')
 
 # Files to skip (not stock lists)
 _SKIP_FILES = {'fetch_universes.py', 'README.txt'}
@@ -21,12 +12,12 @@ _SKIP_FILES = {'fetch_universes.py', 'README.txt'}
 
 def list_universes() -> list[str]:
     """Return display names for all available universe CSVs."""
-    names = list(_BUILTIN_UNIVERSES.keys())
+    names = list(BUILTIN_UNIVERSE_FILES.keys())
     try:
         files = os.listdir(UNIVERSE_DIR)
     except OSError:
         return names
-    known_files = set(_BUILTIN_UNIVERSES.values())
+    known_files = set(BUILTIN_UNIVERSE_FILES.values())
     for f in sorted(files):
         if f in _SKIP_FILES or not f.endswith('.csv') or f in known_files:
             continue
@@ -37,7 +28,7 @@ def list_universes() -> list[str]:
 
 def _filename_for(universe_name: str) -> str:
     """Resolve display name to CSV filename."""
-    fname = _BUILTIN_UNIVERSES.get(universe_name)
+    fname = BUILTIN_UNIVERSE_FILES.get(universe_name)
     if not fname:
         fname = universe_name.lower().replace(' ', '_') + '.csv'
     return fname

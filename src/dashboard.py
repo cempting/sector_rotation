@@ -1,7 +1,7 @@
 import streamlit as st
 
 from .cache import clear_tickers_cache
-from .constants import SECTOR_GRID_COLS, SECTORS
+from .constants import SECTOR_GRID_COLS, resolve_sector_proxy_ticker
 from .renderers import (
     _render_sector_industry_summary,
     render_industry_dashboard,
@@ -242,13 +242,7 @@ def main() -> None:
         cols = st.columns(SECTOR_GRID_COLS)
         for i, sector_name in enumerate(universe_sectors):
             with cols[i % SECTOR_GRID_COLS]:
-                etf_ticker = SECTORS.get(sector_name)
-                if not etf_ticker:
-                    from .constants import SECTOR_NAME_MAP
-                    for short, long_name in SECTOR_NAME_MAP.items():
-                        if long_name == sector_name:
-                            etf_ticker = SECTORS.get(short)
-                            break
+                etf_ticker = resolve_sector_proxy_ticker(selected_universe, sector_name)
                 if etf_ticker:
                     render_sector_card(sector_name, etf_ticker)
                 else:

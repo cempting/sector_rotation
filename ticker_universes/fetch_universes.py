@@ -184,4 +184,79 @@ nyse = nyse.sort_values("Ticker").reset_index(drop=True)
 nyse.to_csv(os.path.join(OUT_DIR, "nyse.csv"), index=False)
 print(f"  Wrote {len(nyse)} rows to nyse.csv")
 
+# ---------- ASX 200 ----------
+print("Fetching ASX 200 from Wikipedia...")
+html_asx = fetch_html("https://en.wikipedia.org/wiki/S%26P/ASX_200")
+tables_asx = pd.read_html(StringIO(html_asx))
+asx = None
+for t in tables_asx:
+    cols = [str(c).lower() for c in t.columns]
+    if "code" in cols and ("company" in cols or "name" in cols):
+        asx = t
+        break
+assert asx is not None, "Could not find ASX 200 table"
+asx = asx[["Code", "Company", "Sector"]].copy()
+asx.columns = ["Ticker", "Name", "Sector"]
+asx["Ticker"] = asx["Ticker"].astype(str).str.strip() + ".AX"
+asx["Industry"] = asx["Sector"]
+for col in ("Sector", "Industry"):
+    asx[col] = asx[col].fillna("undefined").replace("", "undefined")
+asx = asx[["Ticker", "Name", "Sector", "Industry"]].sort_values("Ticker").reset_index(drop=True)
+asx.to_csv(os.path.join(OUT_DIR, "asx200.csv"), index=False)
+print(f"  Wrote {len(asx)} rows to asx200.csv")
+
+# ---------- Ibovespa (Brazil B3) ----------
+print("Fetching Ibovespa constituents via yfinance (.SA suffix)...")
+import yfinance as yf
+IBOV_BASE = [
+    "PETR4", "VALE3", "ITUB4", "BBDC4", "ABEV3", "WEGE3", "RENT3", "RDOR3",
+    "BBAS3", "B3SA3", "SUZB3", "PRIO3", "CSAN3", "LREN3", "GGBR4", "CMIG4",
+    "VIVT3", "BPAC11", "HAPV3", "SBSP3", "EGIE3", "TAEE11", "EQTL3", "CPLE6",
+    "JBSS3", "BEEF3", "ARZZ3", "NTCO3", "MULT3", "ENGI11", "FLRY3", "QUAL3",
+    "BBSE3", "IRBR3", "SULA11", "BRAP4", "USIM5", "CSNA3", "CYRE3", "EZTC3",
+    "JHSF3", "MRVE3", "DIRR3", "GFSA3", "SAPR11", "TIMS3", "ALPA4", "MDIA3",
+    "ELET3", "EMBR3",
+]
+ibov_rows = []
+for base in IBOV_BASE:
+    sym = f"{base}.SA"
+    try:
+        info = yf.Ticker(sym).get_info() or {}
+        ibov_rows.append({
+            "Ticker": sym,
+            "Name": info.get("longName") or info.get("shortName") or sym,
+            "Sector": info.get("sector") or "undefined",
+            "Industry": info.get("industry") or "undefined",
+        })
+    except Exception:
+        ibov_rows.append({"Ticker": sym, "Name": sym, "Sector": "undefined", "Industry": "undefined"})
+ibov_df = pd.DataFrame(ibov_rows).sort_values("Ticker").reset_index(drop=True)
+ibov_df.to_csv(os.path.join(OUT_DIR, "ibovespa.csv"), index=False)
+print(f"  Wrote {len(ibov_df)} rows to ibovespa.csv")
+
+# ---------- JSE Top 40 (South Africa) ----------
+print("Fetching JSE Top 40 constituents via yfinance (.JO suffix)...")
+JSE_BASE = [
+    "ABG", "AGL", "AMS", "ANG", "APN", "BAW", "BHP", "BID", "BTI", "CFR",
+    "CLS", "CPI", "DSY", "EXX", "FSR", "GFI", "GLN", "GRT", "HAR", "INL",
+    "INP", "LHC", "MCG", "MNP", "MRP", "MTN", "NED", "NPN", "NPH", "OMU",
+    "REM", "SHP", "SLM", "SPP", "SSL", "TFG", "VOD", "WHL", "SOL", "SNT",
+]
+jse_rows = []
+for base in JSE_BASE:
+    sym = f"{base}.JO"
+    try:
+        info = yf.Ticker(sym).get_info() or {}
+        jse_rows.append({
+            "Ticker": sym,
+            "Name": info.get("longName") or info.get("shortName") or sym,
+            "Sector": info.get("sector") or "undefined",
+            "Industry": info.get("industry") or "undefined",
+        })
+    except Exception:
+        jse_rows.append({"Ticker": sym, "Name": sym, "Sector": "undefined", "Industry": "undefined"})
+jse_df = pd.DataFrame(jse_rows).sort_values("Ticker").reset_index(drop=True)
+jse_df.to_csv(os.path.join(OUT_DIR, "jse_top40.csv"), index=False)
+print(f"  Wrote {len(jse_df)} rows to jse_top40.csv")
+
 print("Done!")
