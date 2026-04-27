@@ -90,6 +90,81 @@ def get_universe_stock_name(universe_name: str, ticker: str) -> str:
     return name or ticker
 
 
+def search_universe_stocks(universe_name: str, query: str, limit: int = 50) -> list[str]:
+    """Return matching tickers for a search query in ticker or company name.
+
+    Search is case-insensitive and returns matches with ticker prefix hits first.
+    """
+    q = (query or "").strip().lower()
+    if not q:
+        return []
+
+    df = load_universe(universe_name).copy()
+    if df.empty:
+        return []
+
+    df["Ticker"] = df["Ticker"].astype(str)
+    df["Name"] = df["Name"].astype(str)
+
+    ticker_prefix = df["Ticker"].str.lower().str.startswith(q, na=False)
+    ticker_contains = df["Ticker"].str.lower().str.contains(q, na=False)
+    name_contains = df["Name"].str.lower().str.contains(q, na=False)
+
+    matches = df[ticker_contains | name_contains].copy()
+    if matches.empty:
+        return []
+
+    matches["_score"] = 0
+    matches.loc[ticker_prefix, "_score"] = 2
+    matches.loc[~ticker_prefix & ticker_contains, "_score"] = 1
+    matches = matches.sort_values(["_score", "Ticker"], ascending=[False, True])
+
+    tickers = matches["Ticker"].drop_duplicates().head(limit).tolist()
+    return tickers
+
+
+def search_all_universes(
+    query: str,
+    per_universe_limit: int = 12,
+    total_limit: int = 80,
+) -> list[dict[str, str]]:
+    """Return cross-universe search matches with universe and ticker metadata."""
+    q = (query or "").strip()
+    if not q:
+        return []
+
+    results: list[dict[str, str]] = []
+    for universe_name in list_universes():
+        tickers = search_universe_stocks(universe_name, q, limit=per_universe_limit)
+        if not tickers:
+            continue
+
+        df = load_universe(universe_name)
+        info_by_ticker = {}
+        if not df.empty:
+            info_by_ticker = (
+                df.drop_duplicates(subset=["Ticker"])
+                .set_index("Ticker")[["Name", "Sector", "Industry"]]
+                .to_dict("index")
+            )
+
+        for ticker in tickers:
+            meta = info_by_ticker.get(ticker, {})
+            results.append(
+                {
+                    "universe": universe_name,
+                    "ticker": ticker,
+                    "name": str(meta.get("Name", "") or ticker),
+                    "sector": str(meta.get("Sector", "") or ""),
+                    "industry": str(meta.get("Industry", "") or ""),
+                }
+            )
+            if len(results) >= total_limit:
+                return results
+
+    return results
+
+
 def get_sector_industry_counts(universe_name: str, sector: str) -> dict[str, int]:
     """Return {industry: stock_count} for all industries in a sector.
 

@@ -3,6 +3,7 @@ import pandas as pd
 import yfinance as yf
 from .charts import get_trend_colors, render_chart, render_stock_chart
 from .constants import INDUSTRY_GRID_COLS, SECTOR_FIGSIZE, SECTOR_GRID_COLS
+from .favorites import is_favorite, list_all_favorites, toggle_favorite
 from .data import (
     compute_industry_aggregate,
     fetch_industry_counts,
@@ -12,7 +13,7 @@ from .data import (
     get_db_sector_name,
     load_equities,
 )
-from .universe import get_universe_tickers, get_universe_industries, get_sector_industry_counts, get_universe_sector_stock_count, get_universe_stock_name
+from .universe import get_universe_tickers, get_universe_industries, get_sector_industry_counts, get_universe_sector_stock_count, get_universe_stock_name, search_all_universes
 
 
 def safe_format(val):
@@ -230,7 +231,7 @@ def _format_fundamental(val, is_pct=False):
         return "N/A"
 
 
-def _render_stock_details_panel(metrics: dict, company_name: str, ticker: str) -> None:
+def _render_stock_details_panel(metrics: dict, company_name: str, ticker: str, universe: str) -> None:
     """Render a compact 3-column details panel sized to sit beside the chart."""
     price = f"${metrics.get('latest', 0):.2f}"
     change = f"{metrics.get('change_20d_pct', 0):+.1f}%"
@@ -262,7 +263,6 @@ def _render_stock_details_panel(metrics: dict, company_name: str, ticker: str) -
             border: 1px solid rgba(128, 128, 128, 0.25);
             border-radius: 0.5rem;
             padding: 0.35rem 0.45rem;
-            margin-bottom: 0.3rem;
             background: rgba(255, 255, 255, 0.02);
         }
         .stock-details-name-label {
@@ -307,6 +307,30 @@ def _render_stock_details_panel(metrics: dict, company_name: str, ticker: str) -
         unsafe_allow_html=True,
     )
 
+    is_now_favorite = is_favorite(universe, ticker)
+    favorite_label = "★" if is_now_favorite else "☆"
+
+    header_col, action_col = st.columns([5, 2])
+    with header_col:
+        st.markdown(
+            (
+                '<div class="stock-details-name">'
+                '<div class="stock-details-name-label">Company</div>'
+                f'<div class="stock-details-name-value">{company_name} ({ticker})</div>'
+                '</div>'
+            ),
+            unsafe_allow_html=True,
+        )
+    with action_col:
+        st.button(
+            favorite_label,
+            key=f"favorite-{universe}-{ticker}",
+            on_click=_toggle_favorite,
+            args=(universe, ticker),
+            help="Toggle favorite",
+            use_container_width=True,
+        )
+
     cards = []
     for label, value, delta in detail_items:
         delta_html = f'<div class="stock-details-delta">{delta}</div>' if delta else ""
@@ -321,10 +345,6 @@ def _render_stock_details_panel(metrics: dict, company_name: str, ticker: str) -
     st.markdown(
         (
             '<div class="stock-details-panel">'
-            '<div class="stock-details-name">'
-            '<div class="stock-details-name-label">Company</div>'
-            f'<div class="stock-details-name-value">{company_name} ({ticker})</div>'
-            '</div>'
             f'<div class="stock-details-grid">{"".join(cards)}</div>'
             '</div>'
         ),
@@ -332,14 +352,21 @@ def _render_stock_details_panel(metrics: dict, company_name: str, ticker: str) -
     )
 
 
-def render_industry_stock_page(sector: str, industry: str) -> None:
-    selected_universe = st.session_state.get("selected_universe", "S&P 500")
-    all_tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
-    st.caption(f"{len(all_tickers)} stocks in {selected_universe}")
-    
-    # Display stocks in 2-column layout for larger charts
-    for row_start in range(0, len(all_tickers), 2):
-        row_tickers = all_tickers[row_start:row_start + 2]
+def _toggle_favorite(universe: str, ticker: str) -> None:
+    now_favorite = toggle_favorite(universe, ticker)
+    if now_favorite:
+        st.toast(f"Added {ticker} to favorites ({universe})")
+    else:
+        st.toast(f"Removed {ticker} from favorites ({universe})")
+
+
+def _render_stock_cards(tickers: list[str], selected_universe: str, empty_message: str) -> None:
+    if not tickers:
+        st.info(empty_message)
+        return
+
+    for row_start in range(0, len(tickers), 2):
+        row_tickers = tickers[row_start:row_start + 2]
         cols = st.columns(2)
         for col_idx, ticker in enumerate(row_tickers):
             with cols[col_idx]:
@@ -351,18 +378,71 @@ def render_industry_stock_page(sector: str, industry: str) -> None:
                     st.write(f"{ticker} could not be loaded")
                     continue
 
-                # Keep graph and details equally wide for balanced screen usage.
                 chart_col, details_col = st.columns([1, 1])
                 with chart_col:
                     render_stock_chart(df, ticker)
 
                 with details_col:
                     if metrics:
-                        _render_stock_details_panel(metrics, company_name, ticker)
+                        _render_stock_details_panel(metrics, company_name, ticker, selected_universe)
                     else:
                         st.caption("No snapshot metrics available.")
 
+
+def render_industry_stock_page(sector: str, industry: str) -> None:
+    selected_universe = st.session_state.get("selected_universe", "S&P 500")
+    all_tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
+    st.caption(f"{len(all_tickers)} stocks in {selected_universe}")
+    _render_stock_cards(
+        tickers=all_tickers,
+        selected_universe=selected_universe,
+        empty_message="No stocks in this industry.",
+    )
+
     st.success(f"✓ Complete! Displayed all {len(all_tickers)} stocks")
+
+
+def render_favorites_page() -> None:
+    grouped = list_all_favorites()
+    total = sum(len(tickers) for tickers in grouped.values())
+    st.subheader("Favorites · All Universes")
+    st.caption(f"{total} favorite stocks")
+
+    if not grouped:
+        st.info("No favorites yet. Open an industry stock page and tap ☆ Favorite.")
+        return
+
+    for universe_name, tickers in grouped.items():
+        st.markdown(f"**{universe_name}**")
+        _render_stock_cards(
+            tickers=tickers,
+            selected_universe=universe_name,
+            empty_message="",
+        )
+
+
+def render_search_results_page() -> None:
+    query = st.session_state.get("search_query", "")
+    matches = search_all_universes(query, per_universe_limit=12, total_limit=80)
+    st.subheader("Search · All Universes")
+    st.caption(f"Query: {query or '(empty)'}")
+    st.caption(f"{len(matches)} matches")
+
+    if not matches:
+        st.info("No matching stocks found. Try ticker fragments or company name words.")
+        return
+
+    grouped: dict[str, list[str]] = {}
+    for match in matches:
+        grouped.setdefault(match["universe"], []).append(match["ticker"])
+
+    for universe_name, tickers in grouped.items():
+        st.markdown(f"**{universe_name}**")
+        _render_stock_cards(
+            tickers=tickers,
+            selected_universe=universe_name,
+            empty_message="",
+        )
 
 
 def _render_sector_industry_summary(universe: str, sector: str) -> None:
