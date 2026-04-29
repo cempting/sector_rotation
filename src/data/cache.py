@@ -18,9 +18,10 @@ def update_all_ticker_caches(progress_callback=None, force_refresh=False):
 import os
 import pandas as pd
 import hashlib
+import time
 from pathlib import Path
 
-CACHE_DIR = Path(__file__).parent.parent / "data_cache"
+CACHE_DIR = Path(__file__).parent.parent.parent / "data_cache"
 CACHE_DIR.mkdir(exist_ok=True)
 
 
@@ -32,12 +33,15 @@ def _ticker_cache_path(ticker: str) -> Path:
 
 
 MIN_CACHE_ROWS = 20  # reject obviously invalid/test cache entries
+CACHE_MAX_AGE_SECONDS = 24 * 60 * 60
 
 
 def load_ticker_from_cache(ticker: str) -> pd.DataFrame | None:
     path = _ticker_cache_path(ticker)
     if path.exists():
         try:
+            if time.time() - path.stat().st_mtime > CACHE_MAX_AGE_SECONDS:
+                return None
             df = pd.read_parquet(path)
             if df is not None and len(df) >= MIN_CACHE_ROWS and "Close" in df.columns:
                 return df

@@ -1,7 +1,7 @@
 import pandas as pd
 import yfinance as yf
 from financedatabase import Equities
-from .constants import (
+from ..constants import (
     DEFAULT_TOP_TICKERS,
     INDEX_START_VALUE,
     SECTOR_NAME_MAP,
@@ -59,7 +59,6 @@ def fetch_industry_tickers(sector: str, industry: str, top_n: int = DEFAULT_TOP_
     if "market_cap" in selected.columns:
         selected = selected.sort_values("market_cap", ascending=False)
 
-    from .cache import load_ticker_from_cache
     valid_tickers = []
     for ticker in selected.index:
         cached = load_ticker_from_cache(ticker)
@@ -83,7 +82,6 @@ def fetch_industry_stock_list(sector: str, industry: str) -> list[str]:
     if "market_cap" in selected.columns:
         selected = selected.sort_values("market_cap", ascending=False)
 
-    from .cache import load_ticker_from_cache
     return [ticker for ticker in selected.index if (load_ticker_from_cache(ticker) is not None and not load_ticker_from_cache(ticker).empty)]
 
 

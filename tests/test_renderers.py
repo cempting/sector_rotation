@@ -4,8 +4,10 @@ import numpy as np
 from sector_rotation.src.renderers import (
     render_data_card,
     safe_format,
+    _compute_return_vol_rr,
     _compute_stock_metrics,
     _format_fundamental,
+    _news_topic,
 )
 
 
@@ -85,6 +87,11 @@ def test_compute_stock_metrics_price_data_only():
     assert metrics["latest"] == df["Close"].iloc[-1]
     assert isinstance(metrics["change_20d_pct"], (int, float))
     assert isinstance(metrics["volatility_20d"], (int, float))
+    assert "liq_trend_3m_pct" in metrics
+    assert "liq_trend_6m_pct" in metrics
+    assert "liq_accel_weekly_pct" in metrics
+    assert "volume_ratio_20_60" in metrics
+    assert "liq_context" in metrics
 
 
 def test_compute_stock_metrics_ma_calculation():
@@ -119,6 +126,41 @@ def test_compute_stock_metrics_short_series():
     # Should compute without error even with short series
     assert metrics["latest"] == 104
     assert "change_20d_pct" in metrics  # May be 0 if series too short
+
+
+def test_compute_stock_metrics_with_multiindex_price_columns():
+    dates = pd.date_range("2024-01-01", periods=80)
+    df = pd.DataFrame(
+        {
+            ("Close", "TEST"): np.linspace(100, 120, 80),
+            ("Volume", "TEST"): np.full(80, 1_000_000),
+        },
+        index=dates,
+    )
+
+    metrics = _compute_stock_metrics(df, "TEST")
+
+    assert metrics["latest"] == 120
+    assert "change_20d_pct" in metrics
+    assert "volatility_20d" in metrics
+
+
+def test_compute_stock_metrics_uses_densest_multiindex_series():
+    dates = pd.date_range("2024-01-01", periods=80)
+    df = pd.DataFrame(
+        {
+            ("Close", "AMBU"): [np.nan] * 80,
+            ("Close", "B"): np.linspace(100, 120, 80),
+            ("Volume", "AMBU"): [np.nan] * 80,
+            ("Volume", "B"): [1_000_000] * 80,
+        },
+        index=dates,
+    )
+
+    metrics = _compute_stock_metrics(df, "AMBU B")
+
+    assert metrics["latest"] == 120
+    assert "change_20d_pct" in metrics
 
 
 def test_compute_stock_metrics_with_mocked_yfinance(monkeypatch):
@@ -172,3 +214,21 @@ def test_render_data_card_calls_chart(monkeypatch):
 
     assert ("subheader", "My Title") in calls
     assert any(call[0] == "chart" for call in calls)
+
+
+def test_compute_return_vol_rr_outputs_expected_fields():
+    close = pd.Series(np.linspace(100, 120, 80))
+
+    metrics = _compute_return_vol_rr(close, lookback=30)
+
+    assert "exp_return_ann_pct" in metrics
+    assert "exp_vol_ann_pct" in metrics
+    assert "risk_reward" in metrics
+    assert isinstance(metrics["exp_vol_ann_pct"], float)
+
+
+def test_news_topic_classifies_recent_headlines():
+    assert _news_topic("Government signals new tariff plan") == "Politics"
+    assert _news_topic("Inflation data points to cooling economy") == "Economy"
+    assert _news_topic("Broker upgrade lifts target price") == "Rating"
+    assert _news_topic("Company launches new product") == "General"

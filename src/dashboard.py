@@ -1,7 +1,8 @@
 import streamlit as st
 
-from .cache import clear_tickers_cache
-from .favorites import list_all_favorites, total_favorites_count
+from .data.cache import clear_tickers_cache
+from .data.favorites import list_all_favorites, total_favorites_count
+from .views.liquidity_view import liquidity_refresh_tickers, render_liquidity_chessboard
 from .constants import SECTOR_GRID_COLS, resolve_sector_proxy_ticker
 from .renderers import (
     _render_sector_industry_summary,
@@ -11,7 +12,7 @@ from .renderers import (
     render_search_results_page,
     render_sector_card,
 )
-from .universe import (
+from .data.universe import (
     get_sector_industry_counts,
     get_universe_industries,
     get_universe_sector_stock_count,
@@ -81,13 +82,28 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 # ── nav callbacks ─────────────────────────────────────────────────────────────
 
+def _set_browse_view_from_selection() -> None:
+    selected_sector = st.session_state.get("selected_sector")
+    selected_industry = st.session_state.get("selected_industry")
+
+    if selected_sector and selected_industry:
+        st.session_state.view = "industry_stocks"
+    elif selected_sector:
+        st.session_state.view = "industry"
+    else:
+        st.session_state.view = "sector"
+    st.session_state.nav_view_mode = "browse"
+
+
 def _on_universe_change() -> None:
-    st.session_state.view = "sector"
+    st.session_state.nav_view_mode = "browse"
     for k in ("selected_sector", "selected_industry", "nav_sector", "nav_industry"):
         st.session_state.pop(k, None)
+    st.session_state.view = "sector"
 
 
 def _on_sector_change() -> None:
+    st.session_state.nav_view_mode = "browse"
     val = st.session_state.get("nav_sector", "— all sectors —")
     if val == "— all sectors —":
         st.session_state.view = "sector"
@@ -101,6 +117,7 @@ def _on_sector_change() -> None:
 
 
 def _on_industry_change() -> None:
+    st.session_state.nav_view_mode = "browse"
     val = st.session_state.get("nav_industry", "— all industries —")
     if val == "— all industries —":
         st.session_state.view = "industry"
@@ -111,12 +128,24 @@ def _on_industry_change() -> None:
 
 
 def _open_favorites_view() -> None:
+    st.session_state.nav_view_mode = "favorites"
     st.session_state.view = "favorites"
 
 
 def _open_search_view() -> None:
+    st.session_state.nav_view_mode = "browse"
     st.session_state.search_query = st.session_state.get("nav_search_query", "").strip()
     st.session_state.view = "search"
+
+
+def _on_view_mode_change() -> None:
+    mode = st.session_state.get("nav_view_mode", "browse")
+    if mode == "favorites":
+        st.session_state.view = "favorites"
+    elif mode == "liquidity":
+        st.session_state.view = "liquidity"
+    else:
+        _set_browse_view_from_selection()
 
 
 def _sector_tooltip_details(universe: str, sector: str | None) -> list[str]:
@@ -149,6 +178,12 @@ def _render_top_nav() -> str:
     view = st.session_state.get("view", "sector")
     sector_nav = st.session_state.get("selected_sector")
     industry_nav = st.session_state.get("selected_industry")
+    if view == "favorites":
+        st.session_state["nav_view_mode"] = "favorites"
+    elif view == "liquidity":
+        st.session_state["nav_view_mode"] = "liquidity"
+    else:
+        st.session_state["nav_view_mode"] = "browse"
 
     # ── row 1: Search header controls ─────────────────────────────────────────
     search_input_col, search_action_col = st.columns([9, 1])
@@ -176,7 +211,7 @@ def _render_top_nav() -> str:
         )
 
     # ── row 2: Current selection controls ─────────────────────────────────────
-    nav_universe_col, nav_sector_col, nav_industry_col, nav_favorites_col, nav_refresh_col = st.columns([3, 3, 3, 1, 1])
+    nav_universe_col, nav_sector_col, nav_industry_col, nav_mode_col, nav_refresh_col = st.columns([3, 3, 3, 3, 1])
 
     with nav_universe_col:
         selected_universe = st.selectbox(
@@ -230,31 +265,44 @@ def _render_top_nav() -> str:
                 label_visibility="collapsed",
             )
 
-    with nav_favorites_col:
+    with nav_mode_col:
         favorite_count = total_favorites_count()
-        st.button(
-            f"★ {favorite_count}",
-            key="nav_favorites",
-            help="Open favorites",
-            use_container_width=True,
-            on_click=_open_favorites_view,
+        st.radio(
+            "View",
+            ["browse", "favorites", "liquidity"],
+            key="nav_view_mode",
+            horizontal=True,
+            label_visibility="collapsed",
+            on_change=_on_view_mode_change,
+            format_func=lambda mode: {
+                "browse": "Sector / Industry / Stocks",
+                "favorites": f"Favorites ({favorite_count})",
+                "liquidity": "Liquidity",
+            }[mode],
         )
 
     with nav_refresh_col:
-        if view == "industry_stocks" and sector_nav and industry_nav:
+        current_view = st.session_state.get("view", "sector")
+        if current_view == "industry_stocks" and sector_nav and industry_nav:
             refresh_tickers = get_universe_tickers(selected_universe, sector=sector_nav, industry=industry_nav)
-        elif view == "industry" and sector_nav:
+        elif current_view == "industry" and sector_nav:
             refresh_tickers = get_universe_tickers(selected_universe, sector=sector_nav)
-        elif view == "favorites":
+        elif current_view == "favorites":
             grouped = list_all_favorites()
             refresh_tickers = [t for tickers in grouped.values() for t in tickers]
-        elif view == "search":
+        elif current_view == "search":
             global_matches = search_all_universes(
                 st.session_state.get("search_query", ""),
                 per_universe_limit=12,
                 total_limit=80,
             )
             refresh_tickers = list(dict.fromkeys(m["ticker"] for m in global_matches))
+        elif current_view == "liquidity":
+            refresh_tickers = liquidity_refresh_tickers(
+                selected_universe,
+                st.session_state.get("selected_sector"),
+                bool(st.session_state.get("liquidity_all_markets", False)),
+            )
         else:
             refresh_tickers = get_universe_tickers(selected_universe)
 
@@ -297,6 +345,8 @@ def main() -> None:
         render_favorites_page()
     elif view == "search":
         render_search_results_page()
+    elif view == "liquidity":
+        render_liquidity_chessboard(selected_universe, st.session_state.get("selected_sector"))
     elif view == "industry" and "selected_sector" in st.session_state:
         render_industry_dashboard(st.session_state.selected_sector)
     else:

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from sector_rotation.src import universe
+from sector_rotation.src.data import universe
 
 
 def test_search_universe_stocks_matches_ticker_and_name(monkeypatch):
@@ -38,6 +38,23 @@ def test_search_universe_stocks_prioritizes_prefix(monkeypatch):
 
     assert results[0] == "AABC"
     assert "BAAA" in results
+
+
+def test_get_universe_tickers_deduplicates_preserving_order(monkeypatch):
+    df = pd.DataFrame(
+        {
+            "Ticker": ["SN", "STMN", "SN", "NOVO-B", "STMN"],
+            "Name": ["Smith & Nephew", "Straumann", "Smith & Nephew", "Novo Nordisk", "Straumann"],
+            "Sector": ["Health Care"] * 5,
+            "Industry": ["Health Care"] * 5,
+        }
+    )
+
+    monkeypatch.setattr(universe, "load_universe", lambda _: df)
+
+    results = universe.get_universe_tickers("STOXX Europe 600", sector="Health Care", industry="Health Care")
+
+    assert results == ["SN", "STMN", "NOVO-B"]
 
 
 def test_search_all_universes_returns_grouped_matches(monkeypatch):

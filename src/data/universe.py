@@ -2,9 +2,9 @@ import os
 import functools
 import pandas as pd
 
-from .constants import BUILTIN_UNIVERSE_FILES
+from ..constants import BUILTIN_UNIVERSE_FILES
 
-UNIVERSE_DIR = os.path.join(os.path.dirname(__file__), '..', 'ticker_universes')
+UNIVERSE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'ticker_universes')
 
 # Files to skip (not stock lists)
 _SKIP_FILES = {'fetch_universes.py', 'README.txt'}
@@ -77,7 +77,7 @@ def get_universe_tickers(universe_name: str, sector: str | None = None,
         df = df[df['Sector'] == sector]
     if industry:
         df = df[df['Industry'] == industry]
-    return df['Ticker'].tolist()
+    return list(dict.fromkeys(df['Ticker'].tolist()))
 
 
 def get_universe_stock_name(universe_name: str, ticker: str) -> str:

@@ -59,7 +59,7 @@ def test_render_stock_chart_uses_taller_figure(monkeypatch):
     assert len(recorded) == 1
     width, height = recorded[0].get_size_inches()
     assert width == 8
-    assert height == 4
+    assert height == 5.8
 
 
 def test_render_stock_chart_plots_price_and_mas(monkeypatch):
@@ -80,3 +80,23 @@ def test_render_stock_chart_plots_price_and_mas(monkeypatch):
     # ax1 contains Price, 50 MA, and 150 MA lines.
     ax1 = recorded[0].axes[0]
     assert len(ax1.lines) == 3
+
+
+def test_render_stock_chart_uses_densest_multiindex_series(monkeypatch):
+    recorded = []
+    monkeypatch.setattr("sector_rotation.src.charts.st.pyplot", lambda fig: recorded.append(fig))
+
+    dates = pd.date_range("2020-01-01", periods=80)
+    df = pd.DataFrame(
+        {
+            ("Close", "AMBU"): [float("nan")] * 80,
+            ("Close", "B"): list(range(10, 90)),
+            ("Volume", "AMBU"): [float("nan")] * 80,
+            ("Volume", "B"): [1000] * 80,
+        },
+        index=dates,
+    )
+
+    render_stock_chart(df, "AMBU B")
+
+    assert len(recorded) == 1

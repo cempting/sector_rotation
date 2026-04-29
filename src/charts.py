@@ -66,18 +66,44 @@ def render_sector_chart(df: pd.DataFrame, close: pd.Series, ma50: pd.Series, bg_
                  y_label="Price", legend_label="Price", figsize=SECTOR_FIGSIZE)
 
 
-def render_stock_chart(df: pd.DataFrame, ticker: str) -> None:
-    close = df['Close'].squeeze()
-    if not isinstance(close, pd.Series):
-        close = pd.Series([close], index=df.index[-1:])
-    volume = df['Volume'].squeeze()
-    if not isinstance(volume, pd.Series):
-        volume = pd.Series([volume], index=df.index[-1:])
+def _coerce_numeric_series(values: pd.Series | pd.DataFrame, ticker: str) -> pd.Series:
+    if isinstance(values, pd.Series):
+        return pd.to_numeric(values, errors='coerce').dropna()
+
+    if isinstance(values, pd.DataFrame):
+        if values.empty:
+            return pd.Series(dtype=float)
+
+        numeric = values.apply(pd.to_numeric, errors='coerce')
+        if numeric.empty:
+            return pd.Series(dtype=float)
+
+        non_null_counts = numeric.notna().sum(axis=0)
+        if non_null_counts.empty or int(non_null_counts.max()) == 0:
+            return pd.Series(dtype=float)
+
+        if ticker in numeric.columns:
+            selected = numeric[ticker]
+        else:
+            selected = numeric.loc[:, non_null_counts.idxmax()]
+        return selected.dropna()
+
+    return pd.Series(dtype=float)
+
+
+def render_stock_chart(df: pd.DataFrame, ticker: str, figsize: tuple[float, float] = (8, 5.8)) -> None:
+    close = _coerce_numeric_series(df['Close'], ticker)
+    volume = _coerce_numeric_series(df['Volume'], ticker)
+    if close.empty or volume.empty:
+        st.write(f"{ticker} could not be charted")
+        return
+
+    volume = volume.reindex(close.index).fillna(0)
     ma50 = close.rolling(50).mean()
     ma150 = close.rolling(150).mean()
     bg_color, bar_color = get_trend_colors(ma50)
 
-    fig, ax1 = plt.subplots(figsize=(8, 4.32))
+    fig, ax1 = plt.subplots(figsize=figsize)
     fig.patch.set_facecolor(bg_color)
     ax1.set_facecolor(bg_color)
 

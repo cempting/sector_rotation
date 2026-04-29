@@ -1,6 +1,6 @@
 import pandas as pd
 
-from sector_rotation.src.data import (
+from sector_rotation.src.data.data import (
     fetch_ticker_data_batch,
     get_db_sector_name,
     validate_ticker_batch,
@@ -15,7 +15,7 @@ def test_get_db_sector_name():
 def test_validate_ticker_batch_success(monkeypatch):
     sample_df = pd.DataFrame({"Close": [100.0]})
     monkeypatch.setattr(
-        "sector_rotation.src.data.yf.download",
+        "sector_rotation.src.data.data.yf.download",
         lambda ticker, period, progress: sample_df,
     )
 
@@ -26,7 +26,7 @@ def test_validate_ticker_batch_success(monkeypatch):
 
 def test_validate_ticker_batch_failure(monkeypatch):
     monkeypatch.setattr(
-        "sector_rotation.src.data.yf.download",
+        "sector_rotation.src.data.data.yf.download",
         lambda ticker, period, progress: pd.DataFrame(),
     )
 
@@ -38,7 +38,7 @@ def test_validate_ticker_batch_failure(monkeypatch):
 def test_fetch_ticker_data_batch(monkeypatch):
     sample_df = pd.DataFrame({"Close": [100.0], "Volume": [1000]})
     monkeypatch.setattr(
-        "sector_rotation.src.data.yf.download",
+        "sector_rotation.src.data.data.yf.download",
         lambda ticker, period, progress: sample_df,
     )
 
