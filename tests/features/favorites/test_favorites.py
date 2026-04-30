@@ -1,4 +1,5 @@
 from sector_rotation.src.core.data import favorites
+import pytest
 
 
 def test_add_and_list_favorites(tmp_path, monkeypatch):
@@ -47,3 +48,42 @@ def test_list_all_and_total_count(tmp_path, monkeypatch):
     assert all_favs["S&P 500"] == ["AAPL"]
     assert all_favs["NASDAQ"] == ["MSFT", "GOOG"]
     assert favorites.total_favorites_count() == 3
+
+
+def test_export_favorites_settings_roundtrip(tmp_path, monkeypatch):
+    monkeypatch.setattr(favorites, "FAVORITES_FILE", tmp_path / "favorites.json")
+
+    favorites.add_favorite("S&P 500", "AAPL")
+    favorites.add_favorite("NASDAQ", "MSFT")
+
+    payload = favorites.export_favorites_settings()
+
+    monkeypatch.setattr(favorites, "FAVORITES_FILE", tmp_path / "favorites-imported.json")
+    universe_count, ticker_count = favorites.import_favorites_settings(payload, merge=False)
+
+    assert universe_count == 2
+    assert ticker_count == 2
+    assert favorites.list_all_favorites() == {"NASDAQ": ["MSFT"], "S&P 500": ["AAPL"]}
+
+
+def test_import_favorites_settings_merge(tmp_path, monkeypatch):
+    monkeypatch.setattr(favorites, "FAVORITES_FILE", tmp_path / "favorites.json")
+
+    favorites.add_favorite("NASDAQ", "MSFT")
+    payload = '{"NASDAQ": ["GOOG", "MSFT"], "S&P 500": ["AAPL"]}'
+
+    universe_count, ticker_count = favorites.import_favorites_settings(payload, merge=True)
+
+    assert universe_count == 2
+    assert ticker_count == 3
+    assert favorites.list_all_favorites() == {"NASDAQ": ["MSFT", "GOOG"], "S&P 500": ["AAPL"]}
+
+
+def test_import_favorites_settings_invalid_payload(tmp_path, monkeypatch):
+    monkeypatch.setattr(favorites, "FAVORITES_FILE", tmp_path / "favorites.json")
+
+    with pytest.raises(ValueError, match="Invalid favorites JSON payload"):
+        favorites.import_favorites_settings("not json")
+
+    with pytest.raises(ValueError, match="Favorites payload must be a JSON object"):
+        favorites.import_favorites_settings("[]")
