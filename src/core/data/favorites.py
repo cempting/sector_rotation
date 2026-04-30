@@ -1,9 +1,13 @@
 import json
+import re
 from pathlib import Path
 
 from .cache import CACHE_DIR
 
 FAVORITES_FILE = CACHE_DIR / "favorites.json"
+MAX_IMPORT_BYTES = 1_000_000
+MAX_IMPORT_TICKERS = 10_000
+_TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,14}$")
 
 
 def _normalize_favorites_data(data: object) -> dict[str, list[str]]:
@@ -24,6 +28,32 @@ def _normalize_favorites_data(data: object) -> dict[str, list[str]]:
                 seen.add(ticker)
                 cleaned.append(ticker)
         normalized[universe] = cleaned
+    return normalized
+
+
+def _validate_import_candidate(
+    data: object,
+    allowed_universes: set[str] | None = None,
+) -> dict[str, list[str]]:
+    if not isinstance(data, dict):
+        raise ValueError("Favorites payload must be a JSON object")
+
+    normalized = _normalize_favorites_data(data)
+    total = 0
+
+    for universe, tickers in normalized.items():
+        if not universe.strip():
+            raise ValueError("Universe names must be non-empty strings")
+        if allowed_universes is not None and universe not in allowed_universes:
+            raise ValueError(f"Unknown universe in import payload: {universe}")
+
+        for ticker in tickers:
+            if not _TICKER_RE.match(ticker):
+                raise ValueError(f"Invalid ticker format in import payload: {ticker}")
+            total += 1
+            if total > MAX_IMPORT_TICKERS:
+                raise ValueError("Import payload has too many tickers")
+
     return normalized
 
 
@@ -48,21 +78,34 @@ def export_favorites_settings() -> str:
     return json.dumps(_read_all(), indent=2, sort_keys=True)
 
 
-def import_favorites_settings(payload: str | bytes, merge: bool = False) -> tuple[int, int]:
+def import_favorites_settings(
+    payload: str | bytes,
+    merge: bool = False,
+    allowed_universes: set[str] | None = None,
+) -> tuple[int, int]:
     """Import favorites settings from JSON text/bytes.
 
     Returns (universe_count, ticker_count) after applying the import.
     """
-    try:
-        if isinstance(payload, bytes):
+    if isinstance(payload, bytes):
+        if len(payload) > MAX_IMPORT_BYTES:
+            raise ValueError("Favorites import file is too large")
+        try:
             payload = payload.decode("utf-8")
+        except Exception as exc:
+            raise ValueError("Favorites import file must be valid UTF-8") from exc
+    elif isinstance(payload, str):
+        if len(payload.encode("utf-8")) > MAX_IMPORT_BYTES:
+            raise ValueError("Favorites import file is too large")
+    else:
+        raise ValueError("Favorites payload must be text or bytes")
+
+    try:
         incoming_raw = json.loads(payload)
     except Exception as exc:
         raise ValueError("Invalid favorites JSON payload") from exc
 
-    incoming = _normalize_favorites_data(incoming_raw)
-    if not isinstance(incoming_raw, dict):
-        raise ValueError("Favorites payload must be a JSON object")
+    incoming = _validate_import_candidate(incoming_raw, allowed_universes=allowed_universes)
 
     if merge:
         existing = _read_all()

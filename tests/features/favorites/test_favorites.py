@@ -87,3 +87,41 @@ def test_import_favorites_settings_invalid_payload(tmp_path, monkeypatch):
 
     with pytest.raises(ValueError, match="Favorites payload must be a JSON object"):
         favorites.import_favorites_settings("[]")
+
+
+def test_import_favorites_settings_rejects_unknown_universe(tmp_path, monkeypatch):
+    monkeypatch.setattr(favorites, "FAVORITES_FILE", tmp_path / "favorites.json")
+
+    payload = '{"UNKNOWN": ["AAPL"]}'
+    with pytest.raises(ValueError, match="Unknown universe in import payload"):
+        favorites.import_favorites_settings(payload, allowed_universes={"S&P 500", "NASDAQ"})
+
+
+def test_import_favorites_settings_rejects_invalid_ticker(tmp_path, monkeypatch):
+    monkeypatch.setattr(favorites, "FAVORITES_FILE", tmp_path / "favorites.json")
+
+    payload = '{"S&P 500": ["BAD TICKER"]}'
+    with pytest.raises(ValueError, match="Invalid ticker format"):
+        favorites.import_favorites_settings(payload)
+
+
+def test_import_favorites_settings_rejects_oversized_payload(tmp_path, monkeypatch):
+    monkeypatch.setattr(favorites, "FAVORITES_FILE", tmp_path / "favorites.json")
+
+    payload = b"{" + b"a" * favorites.MAX_IMPORT_BYTES + b"}"
+    with pytest.raises(ValueError, match="too large"):
+        favorites.import_favorites_settings(payload)
+
+
+def test_import_favorites_settings_rejects_non_utf8_bytes(tmp_path, monkeypatch):
+    monkeypatch.setattr(favorites, "FAVORITES_FILE", tmp_path / "favorites.json")
+
+    with pytest.raises(ValueError, match="UTF-8"):
+        favorites.import_favorites_settings(b"\xff\xfe\xfd")
+
+
+def test_import_favorites_settings_rejects_non_text_input(tmp_path, monkeypatch):
+    monkeypatch.setattr(favorites, "FAVORITES_FILE", tmp_path / "favorites.json")
+
+    with pytest.raises(ValueError, match="text or bytes"):
+        favorites.import_favorites_settings(123)  # type: ignore[arg-type]

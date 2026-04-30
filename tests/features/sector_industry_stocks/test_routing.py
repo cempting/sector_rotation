@@ -79,7 +79,7 @@ def test_renderers_industry_dashboard_supplies_callbacks(monkeypatch):
 def test_open_search_view_ignores_empty_query(monkeypatch):
     session_state = _SessionState(
         nav_search_query="   ",
-        nav_view_mode="browse",
+        nav_feature="browse",
         search_query="MSFT",
         view="sector",
     )
@@ -90,11 +90,11 @@ def test_open_search_view_ignores_empty_query(monkeypatch):
 
     assert session_state["view"] == "sector"
     assert session_state["search_query"] == "MSFT"
-    assert session_state["nav_view_mode"] == "browse"
+    assert session_state["nav_feature"] == "browse"
 
 
 def test_open_search_view_sets_query_and_switches_view(monkeypatch):
-    session_state = _SessionState(nav_search_query="  AAPL  ", view="sector", nav_view_mode="browse")
+    session_state = _SessionState(nav_search_query="  AAPL  ", view="sector", nav_feature="browse")
 
     monkeypatch.setattr(dashboard.st, "session_state", session_state)
 
@@ -102,26 +102,36 @@ def test_open_search_view_sets_query_and_switches_view(monkeypatch):
 
     assert session_state["search_query"] == "AAPL"
     assert session_state["view"] == "search"
-    assert session_state["nav_view_mode"] == "browse"
+    assert session_state["nav_feature"] == "search"
 
 
-def test_render_top_nav_leaves_search_button_clickable(monkeypatch):
-    session_state = _SessionState(view="sector", search_query="", nav_search_query="AAPL")
-    button_calls = []
+def test_render_top_nav_delegates_controls_to_active_feature(monkeypatch):
+    session_state = _SessionState(view="search", nav_feature="search")
+    calls = {"nav": 0}
+
+    class _StubFeature:
+        def get_nav_label(self):
+            return "Stub"
+
+        def render_nav_controls(self, selected_universe):
+            calls["nav"] += 1
+            return selected_universe or "S&P 500"
+
+        def get_refresh_tickers(self, selected_universe):
+            return []
+
+        def get_render_kwargs(self, selected_universe):
+            return {}
+
+    def fake_get_feature(route):
+        return _StubFeature()
 
     def fake_columns(spec):
         count = spec if isinstance(spec, int) else len(spec)
         return [_ContextStub() for _ in range(count)]
 
     def fake_button(label, **kwargs):
-        button_calls.append((label, kwargs))
         return False
-
-    def fake_selectbox(label, options, key=None, disabled=False, **kwargs):
-        value = session_state.get(key, options[0])
-        if key is not None:
-            session_state[key] = value
-        return value
 
     def fake_radio(label, options, key=None, **kwargs):
         value = session_state.get(key, options[0])
@@ -131,26 +141,61 @@ def test_render_top_nav_leaves_search_button_clickable(monkeypatch):
 
     monkeypatch.setattr(dashboard.st, "session_state", session_state)
     monkeypatch.setattr(dashboard.st, "markdown", lambda *args, **kwargs: None)
-    monkeypatch.setattr(dashboard.st, "text_input", lambda *args, **kwargs: None)
     monkeypatch.setattr(dashboard.st, "button", fake_button)
-    monkeypatch.setattr(dashboard.st, "selectbox", fake_selectbox)
     monkeypatch.setattr(dashboard.st, "radio", fake_radio)
     monkeypatch.setattr(dashboard.st, "columns", fake_columns)
-    monkeypatch.setattr(dashboard.st, "popover", lambda *args, **kwargs: _ContextStub())
-    monkeypatch.setattr(dashboard.st, "caption", lambda *args, **kwargs: None)
-    monkeypatch.setattr(dashboard, "list_universes", lambda: ["S&P 100"])
-    monkeypatch.setattr(dashboard, "get_universe_sectors", lambda universe: [])
-    monkeypatch.setattr(dashboard, "get_universe_industries", lambda universe, sector: [])
-    monkeypatch.setattr(dashboard, "get_universe_tickers", lambda *args, **kwargs: [])
-    monkeypatch.setattr(dashboard, "get_sector_industry_counts", lambda universe, sector: {})
-    monkeypatch.setattr(dashboard, "get_universe_sector_stock_count", lambda universe, sector: 0)
-    monkeypatch.setattr(dashboard, "search_all_universes", lambda *args, **kwargs: [{"ticker": "AAPL"}])
-    monkeypatch.setattr(dashboard, "list_all_favorites", lambda: {})
-    monkeypatch.setattr(dashboard, "total_favorites_count", lambda: 0)
-    monkeypatch.setattr(dashboard, "liquidity_refresh_tickers", lambda *args, **kwargs: [])
+    monkeypatch.setattr(dashboard.FeatureRegistry, "get_feature", fake_get_feature)
+    monkeypatch.setattr(dashboard, "list_universes", lambda: ["S&P 500"])
+
+    selected_universe = dashboard._render_top_nav()
+
+    assert calls["nav"] == 1
+    assert selected_universe == "S&P 500"
+
+
+def test_render_top_nav_uses_feature_refresh_tickers(monkeypatch):
+    session_state = _SessionState(view="favorites", nav_feature="favorites")
+    calls = {"cleared": None}
+
+    class _StubFeature:
+        def get_nav_label(self):
+            return "Stub"
+
+        def render_nav_controls(self, selected_universe):
+            return "S&P 500"
+
+        def get_refresh_tickers(self, selected_universe):
+            return ["AAPL", "MSFT"]
+
+        def get_render_kwargs(self, selected_universe):
+            return {}
+
+    def fake_get_feature(route):
+        return _StubFeature()
+
+    def fake_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [_ContextStub() for _ in range(count)]
+
+    def fake_button(label, **kwargs):
+        return label == "🔄"
+
+    def fake_radio(label, options, key=None, **kwargs):
+        value = session_state.get(key, options[0])
+        if key is not None:
+            session_state[key] = value
+        return value
+
+    monkeypatch.setattr(dashboard.st, "session_state", session_state)
+    monkeypatch.setattr(dashboard.st, "markdown", lambda *args, **kwargs: None)
+    monkeypatch.setattr(dashboard.st, "button", fake_button)
+    monkeypatch.setattr(dashboard.st, "radio", fake_radio)
+    monkeypatch.setattr(dashboard.st, "columns", fake_columns)
+    monkeypatch.setattr(dashboard.st, "rerun", lambda *args, **kwargs: None)
+    monkeypatch.setattr(dashboard.FeatureRegistry, "get_feature", fake_get_feature)
+    monkeypatch.setattr(dashboard, "list_universes", lambda: ["S&P 500"])
+    monkeypatch.setattr(dashboard, "clear_tickers_cache", lambda tickers: calls.__setitem__("cleared", tickers))
 
     dashboard._render_top_nav()
 
-    search_button = next(kwargs for label, kwargs in button_calls if label == "🔍")
-    assert search_button["on_click"] is dashboard._open_search_view
-    assert search_button.get("disabled", False) is False
+    assert calls["cleared"] == ["AAPL", "MSFT"]

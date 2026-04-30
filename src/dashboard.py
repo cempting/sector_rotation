@@ -1,19 +1,15 @@
 import streamlit as st
 
+from .core.data import list_universes
 from .core.data.cache import clear_tickers_cache
-from .core.data.favorites import list_all_favorites, total_favorites_count
-from .features.liquidity import liquidity_refresh_tickers
-from .constants import SECTOR_GRID_COLS
-from .core.data.universe import (
-    get_sector_industry_counts,
-    get_universe_industries,
-    get_universe_sector_stock_count,
-    get_universe_sectors,
-    get_universe_tickers,
-    list_universes,
-    search_all_universes,
-)
 from .features import FeatureRegistry
+
+_ROUTE_BY_FEATURE = {
+    "browse": "sector_industry_stocks",
+    "search": "search",
+    "favorites": "favorites",
+    "liquidity": "liquidity",
+}
 
 # ── mobile-friendly top-nav CSS ───────────────────────────────────────────────
 _TOP_NAV_CSS = """
@@ -55,263 +51,106 @@ section[data-testid="stSidebar"] { display: none !important; }
     .stButton button { font-size: 0.8rem !important; padding: 0.3rem 0.5rem; }
 }
 
-.nav-hover-info {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.7rem;
-    height: 1.7rem;
-    margin-top: 0.35rem;
-    border: 1px solid rgba(255,255,255,0.18);
-    border-radius: 999px;
-    font-size: 0.85rem;
-    opacity: 0.8;
-    cursor: help;
-    user-select: none;
+/* favorites import/export row visual alignment */
+.favorites-controls [data-testid="stFileUploader"] {
+    max-width: 18rem;
+}
+
+.favorites-controls .stButton button,
+.favorites-controls .stDownloadButton button {
+    min-height: 2.35rem;
+}
+
+.favorites-controls [data-testid="stFileUploaderDropzone"] {
+    min-height: 2.35rem;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+}
+
+.favorites-controls [data-testid="stCheckbox"] {
+    padding-top: 0.35rem;
 }
 </style>
 """
 
 
-# ── nav callbacks ─────────────────────────────────────────────────────────────
+def _feature_for_view(view: str) -> str:
+    if view in {"favorites", "search", "liquidity"}:
+        return view
+    return "browse"
 
-def _set_browse_view_from_selection() -> None:
-    selected_sector = st.session_state.get("selected_sector")
-    selected_industry = st.session_state.get("selected_industry")
 
-    if selected_sector and selected_industry:
-        st.session_state.view = "industry_stocks"
-    elif selected_sector:
-        st.session_state.view = "industry"
+def _set_view_for_feature(feature: str) -> None:
+    if feature == "favorites":
+        st.session_state.view = "favorites"
+    elif feature == "search":
+        st.session_state.view = "search"
+    elif feature == "liquidity":
+        st.session_state.view = "liquidity"
     else:
         st.session_state.view = "sector"
-    st.session_state.nav_view_mode = "browse"
-
-
-def _on_universe_change() -> None:
-    st.session_state.nav_view_mode = "browse"
-    for k in ("selected_sector", "selected_industry", "nav_sector", "nav_industry"):
-        st.session_state.pop(k, None)
-    st.session_state.view = "sector"
-
-
-def _on_sector_change() -> None:
-    st.session_state.nav_view_mode = "browse"
-    val = st.session_state.get("nav_sector", "— all sectors —")
-    if val == "— all sectors —":
-        st.session_state.view = "sector"
-        st.session_state.pop("selected_sector", None)
-        st.session_state.pop("selected_industry", None)
-    else:
-        st.session_state.view = "industry"
-        st.session_state.selected_sector = val
-        st.session_state.pop("selected_industry", None)
-    st.session_state.pop("nav_industry", None)
-
-
-def _on_industry_change() -> None:
-    st.session_state.nav_view_mode = "browse"
-    val = st.session_state.get("nav_industry", "— all industries —")
-    if val == "— all industries —":
-        st.session_state.view = "industry"
-        st.session_state.pop("selected_industry", None)
-    else:
-        st.session_state.view = "industry_stocks"
-        st.session_state.selected_industry = val
-
-
-def _open_favorites_view() -> None:
-    st.session_state.nav_view_mode = "favorites"
-    st.session_state.view = "favorites"
 
 
 def _open_search_view() -> None:
     query = st.session_state.get("nav_search_query", "").strip()
     if not query:
         return
-
-    st.session_state.nav_view_mode = "browse"
     st.session_state.search_query = query
+    st.session_state.nav_feature = "search"
     st.session_state.view = "search"
 
-
-def _on_view_mode_change() -> None:
-    mode = st.session_state.get("nav_view_mode", "browse")
-    if mode == "favorites":
-        st.session_state.view = "favorites"
-    elif mode == "liquidity":
-        st.session_state.view = "liquidity"
-    else:
-        _set_browse_view_from_selection()
-
-
-def _sector_tooltip_details(universe: str, sector: str | None) -> list[str]:
-    if not sector or sector == "— all sectors —":
-        return ["Select a sector to see stock and industry details."]
-
-    counts = get_sector_industry_counts(universe, sector)
-    total = get_universe_sector_stock_count(universe, sector)
-    undef_count = counts.get("undefined", 0)
-    assigned = total - undef_count
-    details = [
-        f"Total stocks: {total}",
-        f"Classified: {assigned}",
-    ]
-    if undef_count:
-        details.append(f"Unclassified: {undef_count}")
-    for industry, count in counts.items():
-        label = "Unclassified" if industry == "undefined" else industry
-        details.append(f"{label}: {count}")
-    return details
-
-
-# ── top-nav bar ───────────────────────────────────────────────────────────────
 
 def _render_top_nav() -> str:
     """Render the sticky top navigation bar; returns selected_universe."""
     st.markdown('<div class="top-nav">', unsafe_allow_html=True)
 
-    universes = list_universes()
-    view = st.session_state.get("view", "sector")
-    sector_nav = st.session_state.get("selected_sector")
-    industry_nav = st.session_state.get("selected_industry")
-    if view == "favorites":
-        st.session_state["nav_view_mode"] = "favorites"
-    elif view == "liquidity":
-        st.session_state["nav_view_mode"] = "liquidity"
-    else:
-        st.session_state["nav_view_mode"] = "browse"
+    all_universes = list_universes()
+    if "nav_universe" not in st.session_state or st.session_state.get("nav_universe") not in all_universes:
+        st.session_state["nav_universe"] = all_universes[0] if all_universes else ""
 
-    # ── row 1: Search header controls ─────────────────────────────────────────
-    search_input_col, search_action_col = st.columns([9, 1])
+    current_feature = _feature_for_view(st.session_state.get("view", "sector"))
+    nav_feature = st.session_state.get("nav_feature", current_feature)
+    if nav_feature not in _ROUTE_BY_FEATURE:
+        nav_feature = current_feature
+    st.session_state["nav_feature"] = nav_feature
 
-    with search_input_col:
-        st.text_input(
-            "Search",
-            key="nav_search_query",
-            value=st.session_state.get("search_query", ""),
-            placeholder="Ticker or company",
-            on_change=_open_search_view,
-            label_visibility="collapsed",
-        )
+    # Row 1: feature selector + refresh
+    feature_col, refresh_col = st.columns([9, 1])
 
-    with search_action_col:
-        current_query = st.session_state.get("nav_search_query", "").strip()
-        has_query = bool(current_query)
-        search_matches = len(search_all_universes(current_query, per_universe_limit=12, total_limit=80)) if has_query else 0
-        st.button(
-            "🔍",
-            key="nav_search",
-            help=f"Search stocks ({search_matches} matches)" if has_query else "Search stocks",
-            use_container_width=True,
-            on_click=_open_search_view,
-        )
-
-    # ── row 2: Current selection controls ─────────────────────────────────────
-    nav_universe_col, nav_sector_col, nav_industry_col, nav_mode_col, nav_refresh_col = st.columns([3, 3, 3, 3, 1])
-
-    with nav_universe_col:
-        selected_universe = st.selectbox(
-            "Universe", universes,
-            key="nav_universe",
-            on_change=_on_universe_change,
-            label_visibility="collapsed",
-        )
-    st.session_state.selected_universe = selected_universe
-
-    csv_sectors = get_universe_sectors(selected_universe)
-    sector_options = ["— all sectors —"] + csv_sectors
-    current_sector = st.session_state.get("selected_sector", "— all sectors —")
-    st.session_state["nav_sector"] = current_sector if current_sector in sector_options else "— all sectors —"
-
-    with nav_sector_col:
-        sector_select_col, sector_info_col = st.columns([10, 1])
-        with sector_select_col:
-            st.selectbox(
-                "Sector", sector_options,
-                key="nav_sector",
-                on_change=_on_sector_change,
-                label_visibility="collapsed",
-            )
-        with sector_info_col:
-            selected_sector = st.session_state.get("nav_sector")
-            tooltip_details = _sector_tooltip_details(selected_universe, selected_sector)
-            with st.popover("i", help="Show sector details", use_container_width=True):
-                if selected_sector and selected_sector != "— all sectors —":
-                    st.markdown(f"**{selected_sector}**")
-                for detail in tooltip_details:
-                    st.caption(detail)
-
-    with nav_industry_col:
-        current_sector_val = st.session_state.get("nav_sector", "— all sectors —")
-        if current_sector_val != "— all sectors —":
-            csv_industries = get_universe_industries(selected_universe, current_sector_val)
-            industry_options = ["— all industries —"] + csv_industries
-            current_industry = st.session_state.get("selected_industry", "— all industries —")
-            st.session_state["nav_industry"] = current_industry if current_industry in industry_options else "— all industries —"
-            st.selectbox(
-                "Industry", industry_options,
-                key="nav_industry",
-                on_change=_on_industry_change,
-                label_visibility="collapsed",
-            )
-        else:
-            st.selectbox(
-                "Industry", ["— all industries —"],
-                disabled=True,
-                label_visibility="collapsed",
-            )
-
-    with nav_mode_col:
-        favorite_count = total_favorites_count()
-        st.radio(
-            "View",
-            ["browse", "favorites", "liquidity"],
-            key="nav_view_mode",
+    with feature_col:
+        labels = {
+            name: FeatureRegistry.get_feature(route).get_nav_label()
+            for name, route in _ROUTE_BY_FEATURE.items()
+        }
+        selected_feature = st.radio(
+            "Feature",
+            list(_ROUTE_BY_FEATURE.keys()),
+            index=list(_ROUTE_BY_FEATURE.keys()).index(nav_feature),
+            key="nav_feature",
             horizontal=True,
             label_visibility="collapsed",
-            on_change=_on_view_mode_change,
-            format_func=lambda mode: {
-                "browse": "Sector / Industry / Stocks",
-                "favorites": f"Favorites ({favorite_count})",
-                "liquidity": "Liquidity",
-            }[mode],
+            format_func=lambda mode: labels[mode],
         )
+        if selected_feature != current_feature:
+            _set_view_for_feature(selected_feature)
 
-    with nav_refresh_col:
-        current_view = st.session_state.get("view", "sector")
-        if current_view == "industry_stocks" and sector_nav and industry_nav:
-            refresh_tickers = get_universe_tickers(selected_universe, sector=sector_nav, industry=industry_nav)
-        elif current_view == "industry" and sector_nav:
-            refresh_tickers = get_universe_tickers(selected_universe, sector=sector_nav)
-        elif current_view == "favorites":
-            grouped = list_all_favorites()
-            refresh_tickers = [t for tickers in grouped.values() for t in tickers]
-        elif current_view == "search":
-            global_matches = search_all_universes(
-                st.session_state.get("search_query", ""),
-                per_universe_limit=12,
-                total_limit=80,
-            )
-            refresh_tickers = list(dict.fromkeys(m["ticker"] for m in global_matches))
-        elif current_view == "liquidity":
-            refresh_tickers = liquidity_refresh_tickers(
-                selected_universe,
-                st.session_state.get("selected_sector"),
-                bool(st.session_state.get("liquidity_all_markets", False)),
-            )
-        else:
-            refresh_tickers = get_universe_tickers(selected_universe)
+    active_feature = st.session_state.get("nav_feature", "browse")
+    active_route = _ROUTE_BY_FEATURE[active_feature]
+    feature = FeatureRegistry.get_feature(active_route)
 
-        if st.button("\U0001f504", key="nav_refresh", help="Refresh live data", use_container_width=True):
+    selected_universe = st.session_state.get("selected_universe") or st.session_state.get("nav_universe") or ""
+    selected_universe = feature.render_nav_controls(selected_universe)
+    st.session_state.selected_universe = selected_universe
+
+    with refresh_col:
+        refresh_tickers = feature.get_refresh_tickers(selected_universe)
+        if st.button("🔄", key="nav_refresh", help="Refresh live data", use_container_width=True):
             clear_tickers_cache(refresh_tickers)
             st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
     return selected_universe
 
-
-# ── main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     st.set_page_config(
@@ -326,27 +165,10 @@ def main() -> None:
 
     selected_universe = _render_top_nav()
 
-    # ── content: Route through features ───────────────────────────────────────
-    view = st.session_state.get("view", "sector")
-
-    if view == "favorites":
-        FeatureRegistry.render_route("favorites")
-    elif view == "search":
-        FeatureRegistry.render_route("search")
-    elif view == "liquidity":
-        FeatureRegistry.render_route(
-            "liquidity",
-            universe=selected_universe,
-            sector=st.session_state.get("selected_sector"),
-        )
-    else:
-        # Sector/industry/stocks browsing through SectorIndustryStocksView
-        FeatureRegistry.render_route(
-            "sector_industry_stocks",
-            universe=selected_universe,
-            sector=st.session_state.get("selected_sector"),
-            industry=st.session_state.get("selected_industry"),
-        )
+    active_feature = st.session_state.get("nav_feature", _feature_for_view(st.session_state.get("view", "sector")))
+    active_route = _ROUTE_BY_FEATURE.get(active_feature, "sector_industry_stocks")
+    feature = FeatureRegistry.get_feature(active_route)
+    FeatureRegistry.render_route(active_route, **feature.get_render_kwargs(selected_universe))
 
 
 if __name__ == "__main__":

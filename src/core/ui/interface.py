@@ -27,6 +27,25 @@ class FeatureView(ABC):
         """Render the feature view with flexible parameters specific to each feature."""
         pass
 
+    def get_nav_label(self) -> str:
+        """Label shown in the dashboard top-row feature selector."""
+        return self.get_route_name().replace("_", " ").title()
+
+    def render_nav_controls(self, selected_universe: str) -> str:
+        """Render feature-specific controls below the top selector.
+
+        Return the currently selected universe to be used by the dashboard shell.
+        """
+        return selected_universe
+
+    def get_refresh_tickers(self, selected_universe: str) -> list[str]:
+        """Return tickers to refresh for the currently active feature context."""
+        return []
+
+    def get_render_kwargs(self, selected_universe: str) -> dict[str, Any]:
+        """Return kwargs used when invoking feature `render(...)`."""
+        return {}
+
 
 class ViewRenderer(ABC):
     """Interface for rendering individual UI components."""
