@@ -21,7 +21,7 @@ import hashlib
 import time
 from pathlib import Path
 
-CACHE_DIR = Path(__file__).parent.parent.parent / "data_cache"
+CACHE_DIR = Path(__file__).parent.parent.parent.parent / "data_cache"
 CACHE_DIR.mkdir(exist_ok=True)
 
 

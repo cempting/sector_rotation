@@ -1,59 +1,44 @@
-import streamlit as st
-import pandas as pd
-from collections.abc import Callable
+"""Sector, industry, and stock browsing rendering."""
 
-from ..charts import get_trend_colors, render_chart
-from ..constants import INDUSTRY_GRID_COLS, SECTOR_FIGSIZE
-from ..logic.data_processing import compute_industry_aggregate
-from ..data.data_retrieval import (
+import pandas as pd
+import streamlit as st
+
+from ...charts import get_trend_colors, render_chart
+from ...core.analytics import compute_industry_aggregate, compute_return_vol_rr as compute_return_vol_rr_core
+from ...core.constants import INDUSTRY_GRID_COLS, SECTOR_FIGSIZE, SECTOR_GRID_COLS, resolve_sector_proxy_ticker
+from ...core.data import (
     fetch_sector_data,
     get_sector_industry_counts,
     get_universe_sector_stock_count,
+    get_universe_sectors,
     get_universe_tickers,
-    search_all_universes,
 )
-from ..data.favorites import list_all_favorites
-from .view_config import FAVORITES_CHART_HEIGHT, FAVORITES_ROW_LAYOUT
+from ...core.navigation import open_industry_stocks
+from ...core.ui import render_data_card, render_stock_cards
 
 
-ComputeReturnVolFn = Callable[..., dict[str, float]]
-RenderDataCardFn = Callable[..., None]
-OpenIndustryStocksFn = Callable[[str, str], None]
-RenderStockCardsFn = Callable[..., None]
-
-
-def _render_stock_list_controls(
-    *,
-    sector: str,
-    industry: str,
-    title: str,
-    count: int,
-    tickers: list[str],
-    open_industry_stocks: OpenIndustryStocksFn,
-) -> None:
-    btn_col, info_col = st.columns([4, 1])
-    with btn_col:
-        st.button(
-            "View Stocks",
-            key=f"stocks-{sector}-{industry}",
-            on_click=open_industry_stocks,
-            args=(sector, industry),
-            use_container_width=True,
-        )
-    with info_col:
-        with st.popover("ⓘ", use_container_width=True):
-            st.markdown(f"**{title}**")
-            st.caption(f"{count} stocks")
-            for ticker in tickers:
-                st.caption(ticker)
+def render_sector_grid(universe: str) -> None:
+    universe_sectors = get_universe_sectors(universe)
+    cols = st.columns(SECTOR_GRID_COLS)
+    for i, sector_name in enumerate(universe_sectors):
+        with cols[i % SECTOR_GRID_COLS]:
+            etf_ticker = resolve_sector_proxy_ticker(universe, sector_name)
+            if etf_ticker:
+                render_sector_card(sector_name, etf_ticker)
+            else:
+                _render_universe_sector_card(universe, sector_name)
 
 
 def render_industry_dashboard(
     sector: str,
-    compute_return_vol_rr: ComputeReturnVolFn,
-    render_data_card: RenderDataCardFn,
-    open_industry_stocks: OpenIndustryStocksFn,
+    compute_return_vol_rr=None,
+    render_data_card_fn=None,
+    open_industry_stocks_fn=None,
 ) -> None:
+    compute_return_vol_rr = compute_return_vol_rr or compute_return_vol_rr_core
+    render_data_card_fn = render_data_card_fn or render_data_card
+    open_industry_stocks_fn = open_industry_stocks_fn or open_industry_stocks
+
     selected_universe = st.session_state.get("selected_universe", "S&P 500")
     counts = get_sector_industry_counts(selected_universe, sector)
     industries = [ind for ind in counts if ind != "undefined"]
@@ -77,9 +62,9 @@ def render_industry_dashboard(
 
             if tickers:
                 with st.spinner(f"Building {industry} aggregate..."):
-                    avg_close, total_volume, num_fetched = compute_industry_aggregate(tickers)
+                    avg_close, total_volume, _ = compute_industry_aggregate(tickers)
                 risk_metrics = compute_return_vol_rr(avg_close, lookback=30)
-                render_data_card(
+                render_data_card_fn(
                     title=f"{industry} ({count})",
                     close=avg_close,
                     volume=total_volume,
@@ -99,7 +84,7 @@ def render_industry_dashboard(
                 title=industry,
                 count=count,
                 tickers=tickers,
-                open_industry_stocks=open_industry_stocks,
+                open_industry_stocks_fn=open_industry_stocks_fn,
             )
 
     if undef_count:
@@ -114,71 +99,22 @@ def render_industry_dashboard(
                 title="Unclassified",
                 count=undef_count,
                 tickers=undef_tickers,
-                open_industry_stocks=open_industry_stocks,
+                open_industry_stocks_fn=open_industry_stocks_fn,
             )
 
 
-def render_industry_stock_page(
-    sector: str,
-    industry: str,
-    render_stock_cards: RenderStockCardsFn,
-) -> None:
+def render_industry_stock_page(sector: str, industry: str, render_stock_cards_fn=None) -> None:
+    render_stock_cards_fn = render_stock_cards_fn or render_stock_cards
+
     selected_universe = st.session_state.get("selected_universe", "S&P 500")
     all_tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
     st.caption(f"{len(all_tickers)} stocks in {selected_universe}")
-    render_stock_cards(
+    render_stock_cards_fn(
         tickers=all_tickers,
         selected_universe=selected_universe,
         empty_message="No stocks in this industry.",
     )
     st.success(f"✓ Complete! Displayed all {len(all_tickers)} stocks")
-
-
-def render_favorites_page(render_stock_cards: RenderStockCardsFn) -> None:
-    grouped = list_all_favorites()
-    total = sum(len(tickers) for tickers in grouped.values())
-    st.subheader("Favorites · All Universes")
-    st.caption(f"{total} favorite stocks")
-
-    if not grouped:
-        st.info("No favorites yet. Open an industry stock page and tap ☆ Favorite.")
-        return
-
-    for universe_name, tickers in grouped.items():
-        st.markdown(f"**{universe_name}**")
-        render_stock_cards(
-            tickers=tickers,
-            selected_universe=universe_name,
-            empty_message="",
-            show_liquidity_context=True,
-            stocks_per_row=1,
-            chart_height=FAVORITES_CHART_HEIGHT,
-            row_layout=FAVORITES_ROW_LAYOUT,
-        )
-
-
-def render_search_results_page(render_stock_cards: RenderStockCardsFn) -> None:
-    query = st.session_state.get("search_query", "")
-    matches = search_all_universes(query, per_universe_limit=12, total_limit=80)
-    st.subheader("Search · All Universes")
-    st.caption(f"Query: {query or '(empty)'}")
-    st.caption(f"{len(matches)} matches")
-
-    if not matches:
-        st.info("No matching stocks found. Try ticker fragments or company name words.")
-        return
-
-    grouped: dict[str, list[str]] = {}
-    for match in matches:
-        grouped.setdefault(match["universe"], []).append(match["ticker"])
-
-    for universe_name, tickers in grouped.items():
-        st.markdown(f"**{universe_name}**")
-        render_stock_cards(
-            tickers=tickers,
-            selected_universe=universe_name,
-            empty_message="",
-        )
 
 
 def render_sector_industry_summary(universe: str, sector: str) -> None:
@@ -235,6 +171,62 @@ def render_sector_card(name: str, ticker: str) -> None:
         undef = counts.get("undefined", 0)
         with st.popover("ⓘ", use_container_width=True):
             st.markdown(f"**{name}**")
+            st.caption(f"Total stocks: {total}")
+            st.caption(f"Classified: {total - undef}")
+            if undef:
+                st.caption(f"Unclassified: {undef}")
+            for industry, cnt in counts.items():
+                label = "Unclassified" if industry == "undefined" else industry
+                st.caption(f"{label}: {cnt}")
+
+
+def _render_stock_list_controls(
+    *,
+    sector: str,
+    industry: str,
+    title: str,
+    count: int,
+    tickers: list[str],
+    open_industry_stocks_fn,
+) -> None:
+    btn_col, info_col = st.columns([4, 1])
+    with btn_col:
+        st.button(
+            "View Stocks",
+            key=f"stocks-{sector}-{industry}",
+            on_click=open_industry_stocks_fn,
+            args=(sector, industry),
+            use_container_width=True,
+        )
+    with info_col:
+        with st.popover("ⓘ", use_container_width=True):
+            st.markdown(f"**{title}**")
+            st.caption(f"{count} stocks")
+            for ticker in tickers:
+                st.caption(ticker)
+
+
+def _render_universe_sector_card(universe: str, sector: str) -> None:
+    def open_industry_view() -> None:
+        st.session_state.view = "industry"
+        st.session_state.selected_sector = sector
+        st.session_state.pop("selected_industry", None)
+
+    st.subheader(sector)
+    btn_col, info_col = st.columns([4, 1])
+    with btn_col:
+        st.button(
+            "View Industries",
+            key=f"universe-sector-{universe}-{sector}",
+            on_click=open_industry_view,
+            use_container_width=True,
+        )
+    with info_col:
+        counts = get_sector_industry_counts(universe, sector)
+        total = get_universe_sector_stock_count(universe, sector)
+        undef = counts.get("undefined", 0)
+        with st.popover("ⓘ", use_container_width=True):
+            st.markdown(f"**{sector}**")
             st.caption(f"Total stocks: {total}")
             st.caption(f"Classified: {total - undef}")
             if undef:

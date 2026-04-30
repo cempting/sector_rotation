@@ -1,6 +1,6 @@
 import pandas as pd
 
-from sector_rotation.src.data import universe
+from sector_rotation.src.core.data import universe
 
 
 def test_search_universe_stocks_matches_ticker_and_name(monkeypatch):
@@ -20,6 +20,25 @@ def test_search_universe_stocks_matches_ticker_and_name(monkeypatch):
 
     assert by_ticker == ["AAPL"]
     assert by_name == ["MSFT"]
+
+
+def test_search_universe_stocks_matches_sector_and_industry(monkeypatch):
+    df = pd.DataFrame(
+        {
+            "Ticker": ["AAPL", "JNJ", "XOM"],
+            "Name": ["Apple Inc", "Johnson & Johnson", "Exxon Mobil"],
+            "Sector": ["Technology", "Healthcare", "Energy"],
+            "Industry": ["Consumer Electronics", "Pharmaceuticals", "Oil & Gas"],
+        }
+    )
+
+    monkeypatch.setattr(universe, "load_universe", lambda _: df)
+
+    by_sector = universe.search_universe_stocks("S&P 500", "health")
+    by_industry = universe.search_universe_stocks("S&P 500", "oil")
+
+    assert by_sector == ["JNJ"]
+    assert by_industry == ["XOM"]
 
 
 def test_search_universe_stocks_prioritizes_prefix(monkeypatch):

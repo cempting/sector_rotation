@@ -82,4 +82,16 @@ To add a new market (for example Australia, South America, Africa):
 3. Add/assign a market key in `UNIVERSE_MARKET`.
 4. Add the market's sector proxy map in `MARKET_SECTOR_CONFIG`.
 5. Validate resolution coverage by checking all sectors in that universe resolve to a proxy.
+
+## Add a feature (plugin-style)
+
+Features are routed through `FeatureRegistry`, so adding a new feature is intentionally small:
+
+1. Create a package under `src/features/<your_feature>/`.
+2. Implement a `FeatureView` class with `get_route_name()` and `render(...)`.
+3. Export the class from `src/features/<your_feature>/__init__.py`.
+4. Register it in `src/features/__init__.py` inside `FeatureRegistry._ensure_initialized()` via `register_feature(YourViewClass)`.
+5. Route to it from `src/dashboard.py` using `FeatureRegistry.render_route("your_route", **kwargs)`.
+
+This keeps core usage simple: controllers only need route names and render kwargs, not feature construction details.
  

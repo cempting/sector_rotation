@@ -1,6 +1,6 @@
 import pandas as pd
 
-from sector_rotation.src.views.liquidity_view import (
+from sector_rotation.src.features.liquidity.rendering import (
     _collect_sector_rows_all_markets,
     build_flow_edges,
     classify_liquidity_regime,
@@ -31,13 +31,13 @@ def test_collect_sector_rows_all_markets_aggregates_same_sector(monkeypatch):
         }
     )
 
-    monkeypatch.setattr("sector_rotation.src.views.liquidity_view.list_universes", lambda: ["S&P 500", "ASX 200"])
-    monkeypatch.setattr("sector_rotation.src.views.liquidity_view.get_universe_sectors", lambda u: ["Technology"]) 
+    monkeypatch.setattr("sector_rotation.src.features.liquidity.rendering.list_universes", lambda: ["S&P 500", "ASX 200"])
+    monkeypatch.setattr("sector_rotation.src.features.liquidity.rendering.get_universe_sectors", lambda u: ["Technology"]) 
     monkeypatch.setattr(
-        "sector_rotation.src.views.liquidity_view.resolve_sector_proxy_ticker",
+        "sector_rotation.src.features.liquidity.rendering.resolve_sector_proxy_ticker",
         lambda u, s: "XLK" if u == "S&P 500" else "^AXNJ",
     )
-    monkeypatch.setattr("sector_rotation.src.views.liquidity_view.fetch_sector_data", lambda t, period="1y": sample)
+    monkeypatch.setattr("sector_rotation.src.features.liquidity.rendering.fetch_sector_data", lambda t, period="1y": sample)
 
     rows = _collect_sector_rows_all_markets(
         period="1y",
@@ -111,7 +111,7 @@ def test_get_market_sentiment_snapshot_shape(monkeypatch):
     )
 
     monkeypatch.setattr(
-        "sector_rotation.src.views.liquidity_view.fetch_sector_data",
+        "sector_rotation.src.features.liquidity.rendering.fetch_sector_data",
         lambda ticker, period="1y": base,
     )
 
@@ -124,10 +124,10 @@ def test_get_market_sentiment_snapshot_shape(monkeypatch):
 
 
 def test_liquidity_refresh_tickers_includes_vix_and_proxies(monkeypatch):
-    monkeypatch.setattr("sector_rotation.src.views.liquidity_view.get_universe_sectors", lambda u: ["Technology"])
-    monkeypatch.setattr("sector_rotation.src.views.liquidity_view.resolve_sector_proxy_ticker", lambda u, s: "XLK")
-    monkeypatch.setattr("sector_rotation.src.views.liquidity_view.get_sector_industry_counts", lambda u, s: {"Software": 3})
-    monkeypatch.setattr("sector_rotation.src.views.liquidity_view.get_universe_tickers", lambda u, sector=None, industry=None: ["MSFT", "AAPL"])
+    monkeypatch.setattr("sector_rotation.src.features.liquidity.rendering.get_universe_sectors", lambda u: ["Technology"])
+    monkeypatch.setattr("sector_rotation.src.features.liquidity.rendering.resolve_sector_proxy_ticker", lambda u, s: "XLK")
+    monkeypatch.setattr("sector_rotation.src.features.liquidity.rendering.get_sector_industry_counts", lambda u, s: {"Software": 3})
+    monkeypatch.setattr("sector_rotation.src.features.liquidity.rendering.get_universe_tickers", lambda u, sector=None, industry=None: ["MSFT", "AAPL"])
 
     tickers = liquidity_refresh_tickers("S&P 500", "Technology")
 
@@ -137,13 +137,13 @@ def test_liquidity_refresh_tickers_includes_vix_and_proxies(monkeypatch):
 
 
 def test_liquidity_refresh_tickers_all_markets_scans_all_universes(monkeypatch):
-    monkeypatch.setattr("sector_rotation.src.views.liquidity_view.list_universes", lambda: ["S&P 500", "ASX 200"])
+    monkeypatch.setattr("sector_rotation.src.features.liquidity.rendering.list_universes", lambda: ["S&P 500", "ASX 200"])
     monkeypatch.setattr(
-        "sector_rotation.src.views.liquidity_view.get_universe_sectors",
+        "sector_rotation.src.features.liquidity.rendering.get_universe_sectors",
         lambda u: ["Technology"] if u == "S&P 500" else ["Materials"],
     )
     monkeypatch.setattr(
-        "sector_rotation.src.views.liquidity_view.resolve_sector_proxy_ticker",
+        "sector_rotation.src.features.liquidity.rendering.resolve_sector_proxy_ticker",
         lambda u, s: "XLK" if u == "S&P 500" else "^AXMJ",
     )
 

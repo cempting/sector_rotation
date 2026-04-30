@@ -6,9 +6,10 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from ..constants import resolve_sector_proxy_ticker
-from ..data.data import compute_industry_aggregate, fetch_sector_data
-from ..data.universe import (
+from ...core.analytics import compute_industry_aggregate
+from ...core.constants import resolve_sector_proxy_ticker
+from ...core.data import (
+    fetch_sector_data,
     get_sector_industry_counts,
     get_universe_sectors,
     get_universe_tickers,

@@ -1,4 +1,4 @@
-from sector_rotation.src.data import favorites
+from sector_rotation.src.core.data import favorites
 
 
 def test_add_and_list_favorites(tmp_path, monkeypatch):

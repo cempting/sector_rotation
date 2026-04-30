@@ -1,8 +1,8 @@
 import streamlit as st
 from collections.abc import Callable
 
-from ..charts import render_stock_chart
-from ..data.data_retrieval import fetch_ticker_data_batch, get_universe_stock_name
+from ...charts import render_stock_chart
+from ...core.data.data_retrieval import fetch_ticker_data_batch, get_universe_stock_name
 from .view_config import (
     BASE_CHART_WIDTH,
     DEFAULT_STOCK_CHART_SIZE,

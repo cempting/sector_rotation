@@ -1,0 +1,21 @@
+"""Core UI configuration values."""
+
+from .view_config import (  # noqa: F401
+    BASE_CHART_WIDTH,
+    DEFAULT_STOCK_CHART_SIZE,
+    LIQUIDITY_STOCK_CHART_DEFAULT_HEIGHT,
+    FAVORITES_CHART_HEIGHT,
+    FAVORITES_PANEL_MIN_HEIGHT_REM,
+    FAVORITES_ROW_LAYOUT,
+    normalize_row_layout,
+)
+
+__all__ = [
+    "BASE_CHART_WIDTH",
+    "DEFAULT_STOCK_CHART_SIZE",
+    "LIQUIDITY_STOCK_CHART_DEFAULT_HEIGHT",
+    "FAVORITES_CHART_HEIGHT",
+    "FAVORITES_PANEL_MIN_HEIGHT_REM",
+    "FAVORITES_ROW_LAYOUT",
+    "normalize_row_layout",
+]

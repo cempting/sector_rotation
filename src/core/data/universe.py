@@ -4,7 +4,7 @@ import pandas as pd
 
 from ..constants import BUILTIN_UNIVERSE_FILES
 
-UNIVERSE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'ticker_universes')
+UNIVERSE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'ticker_universes')
 
 # Files to skip (not stock lists)
 _SKIP_FILES = {'fetch_universes.py', 'README.txt'}
@@ -91,7 +91,7 @@ def get_universe_stock_name(universe_name: str, ticker: str) -> str:
 
 
 def search_universe_stocks(universe_name: str, query: str, limit: int = 50) -> list[str]:
-    """Return matching tickers for a search query in ticker or company name.
+    """Return matching tickers for a search query in ticker/name/sector/industry.
 
     Search is case-insensitive and returns matches with ticker prefix hits first.
     """
@@ -105,18 +105,24 @@ def search_universe_stocks(universe_name: str, query: str, limit: int = 50) -> l
 
     df["Ticker"] = df["Ticker"].astype(str)
     df["Name"] = df["Name"].astype(str)
+    df["Sector"] = df["Sector"].astype(str)
+    df["Industry"] = df["Industry"].astype(str)
 
     ticker_prefix = df["Ticker"].str.lower().str.startswith(q, na=False)
     ticker_contains = df["Ticker"].str.lower().str.contains(q, na=False)
     name_contains = df["Name"].str.lower().str.contains(q, na=False)
+    sector_contains = df["Sector"].str.lower().str.contains(q, na=False)
+    industry_contains = df["Industry"].str.lower().str.contains(q, na=False)
 
-    matches = df[ticker_contains | name_contains].copy()
+    matches = df[ticker_contains | name_contains | sector_contains | industry_contains].copy()
     if matches.empty:
         return []
 
     matches["_score"] = 0
-    matches.loc[ticker_prefix, "_score"] = 2
-    matches.loc[~ticker_prefix & ticker_contains, "_score"] = 1
+    matches.loc[ticker_prefix, "_score"] = 4
+    matches.loc[~ticker_prefix & ticker_contains, "_score"] = 3
+    matches.loc[(matches["_score"] == 0) & name_contains, "_score"] = 2
+    matches.loc[(matches["_score"] == 0) & (sector_contains | industry_contains), "_score"] = 1
     matches = matches.sort_values(["_score", "Ticker"], ascending=[False, True])
 
     tickers = matches["Ticker"].drop_duplicates().head(limit).tolist()
