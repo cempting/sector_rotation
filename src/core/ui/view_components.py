@@ -238,6 +238,308 @@ def _render_score_bar(label: str, score: float) -> None:
     )
 
 
+def _render_stock_header(
+    company_name: str,
+    ticker: str,
+    sector: str,
+    industry: str,
+    favorite_label: str,
+    favorite_button_key: str,
+    on_toggle: Callable[..., Any],
+    on_toggle_args: tuple[Any, ...],
+    show_full_details: bool,
+) -> None:
+    if show_full_details:
+        header_col, action_col = st.columns([5, 2])
+        with header_col:
+            st.markdown(
+                (
+                    '<div class="stock-details-name">'
+                    '<div class="stock-details-name-label">Company</div>'
+                    f'<div class="stock-details-name-value">{company_name} ({ticker})</div>'
+                    f'<div class="stock-details-delta">Sector: {html.escape(sector)} · Industry: {html.escape(industry)}</div>'
+                    "</div>"
+                ),
+                unsafe_allow_html=True,
+            )
+        with action_col:
+            st.button(
+                favorite_label,
+                key=favorite_button_key,
+                on_click=on_toggle,
+                args=on_toggle_args,
+                help="Toggle favorite",
+                use_container_width=True,
+            )
+        return
+
+    header_col, name_col = st.columns([0.7, 6.3])
+    with header_col:
+        st.button(
+            favorite_label,
+            key=favorite_button_key,
+            on_click=on_toggle,
+            args=on_toggle_args,
+            help="Toggle favorite",
+            use_container_width=True,
+        )
+    with name_col:
+        st.markdown(
+            (
+                '<div class="stock-details-name">'
+                f'<div class="stock-details-name-value">{company_name} ({ticker})</div>'
+                f'<div class="stock-details-delta">{html.escape(sector)} · {html.escape(industry)}</div>'
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+
+
+def _section_score(entries: list[tuple[str, object, str]], context: dict[str, object]) -> float:
+    statuses = [_metric_status(label, raw, context) for label, raw, _ in entries]
+    if not statuses:
+        return 0.0
+    return sum(_score_from_status(status) for status in statuses) / len(statuses)
+
+
+def _render_metric_cards(entries: list[tuple[str, object, str]], context: dict[str, object]) -> None:
+    for label, raw, value in entries:
+        _render_colored_detail_card(
+            label,
+            value,
+            _metric_status(label, raw, context),
+            _metric_help_text(label, raw, context),
+            _evaluate_metric_range(label, raw, context),
+        )
+
+
+def _render_score_bars(entries: list[tuple[str, float]]) -> None:
+    for label, score in entries:
+        _render_score_bar(label, score)
+
+
+def _pane_start(title: str) -> None:
+    st.markdown(f'<div class="sr-pane"><div class="sr-pane-title">{html.escape(title)}</div>', unsafe_allow_html=True)
+
+
+def _pane_end() -> None:
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+def _lens_frame(rows: list[tuple[str, float]], fallback_label: str) -> pd.DataFrame:
+    lens_rows = rows if rows else [(fallback_label, 0.0)]
+    return pd.DataFrame(lens_rows, columns=["lens", "value"]).set_index("lens")
+
+
+def _render_compact_stock_panel(
+    universe: str,
+    ticker: str,
+    composite_score: float,
+    quality_score: float,
+    growth_score: float,
+    cashflow_score: float,
+    risk_score: float,
+) -> None:
+    _render_score_bars(
+        [
+            ("Composite", composite_score),
+            ("Quality", quality_score),
+            ("Growth", growth_score),
+            ("Cash Flow", cashflow_score),
+            ("Risk", risk_score),
+        ]
+    )
+    action_col = st.columns([4, 1])[0]
+    with action_col:
+        st.markdown('<div class="sr-open-primary">', unsafe_allow_html=True)
+        if st.button(
+            "Open Dedicated Stock View (Full Analysis)",
+            key=f"details-open-{universe}-{ticker}",
+            use_container_width=True,
+        ):
+            st.session_state["details_focus_universe"] = universe
+            st.session_state["details_focus_ticker"] = ticker
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+def _render_trend_lenses_pane(
+    metrics: dict[str, object],
+    change_20d: float | None,
+    vol_20d: float | None,
+    beta: float | None,
+    rr: float | None,
+) -> None:
+    _pane_start("Trend Lenses")
+    trend_rows: list[tuple[str, float]] = []
+    if change_20d is not None:
+        trend_rows.append(("Price 20D", change_20d))
+    liq_3m = _safe_float(metrics.get("liq_trend_3m_pct"))
+    liq_6m = _safe_float(metrics.get("liq_trend_6m_pct"))
+    liq_accel = _safe_float(metrics.get("liq_accel_weekly_pct"))
+    if liq_3m is not None:
+        trend_rows.append(("Liquidity 3M", liq_3m))
+    if liq_6m is not None:
+        trend_rows.append(("Liquidity 6M", liq_6m))
+    if liq_accel is not None:
+        trend_rows.append(("Liquidity Wk", liq_accel))
+    st.bar_chart(_lens_frame(trend_rows, "Price 20D"))
+
+    risk_rows: list[tuple[str, float]] = []
+    if vol_20d is not None:
+        risk_rows.append(("Vol 20D", vol_20d))
+    exp_vol = _safe_float(metrics.get("exp_vol_ann_pct"))
+    exp_ret = _safe_float(metrics.get("exp_return_ann_pct"))
+    if exp_vol is not None:
+        risk_rows.append(("Exp Vol", exp_vol))
+    if exp_ret is not None:
+        risk_rows.append(("Exp Ret", exp_ret))
+    if beta is not None:
+        risk_rows.append(("Beta x10", beta * 10.0))
+    if rr is not None:
+        risk_rows.append(("R/R x10", rr * 10.0))
+    st.bar_chart(_lens_frame(risk_rows, "Vol 20D"))
+    _pane_end()
+
+
+def _render_workbench_styles(panel_min_height: str) -> None:
+    st.markdown(
+        """
+        <style>
+        .sr-workbench {
+            border: 1px solid rgba(128, 128, 128, 0.28);
+            border-radius: 0.68rem;
+            padding: 0.42rem 0.5rem;
+            min-height: __PANEL_MIN_HEIGHT__;
+            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+        }
+        .sr-hero {
+            border: 1px solid rgba(128, 128, 128, 0.22);
+            border-radius: 0.52rem;
+            padding: 0.34rem 0.42rem;
+            margin-bottom: 0.34rem;
+            background: rgba(255,255,255,0.02);
+        }
+        .sr-hero-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.22rem;
+        }
+        .sr-hero-item {
+            border: 1px solid rgba(128, 128, 128, 0.18);
+            border-radius: 0.42rem;
+            padding: 0.2rem 0.28rem;
+            background: rgba(255,255,255,0.015);
+        }
+        .sr-hero-label {
+            font-size: 0.58rem;
+            line-height: 1.0;
+            opacity: 0.72;
+            margin-bottom: 0.06rem;
+        }
+        .sr-hero-value {
+            font-size: 0.8rem;
+            line-height: 1.08;
+            font-weight: 700;
+        }
+        .sr-pane {
+            border: 1px solid rgba(128, 128, 128, 0.22);
+            border-radius: 0.5rem;
+            padding: 0.28rem 0.34rem;
+            margin-bottom: 0.28rem;
+            background: rgba(255,255,255,0.015);
+        }
+        .sr-pane-title {
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            margin-bottom: 0.16rem;
+            opacity: 0.82;
+            font-weight: 700;
+        }
+        .sr-details-card {
+            border: 1px solid rgba(128, 128, 128, 0.25);
+            border-radius: 0.45rem;
+            padding: 0.2rem 0.32rem;
+            min-height: 2.05rem;
+            margin-bottom: 0.24rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .sr-details-label {
+            font-size: 0.66rem;
+            line-height: 1.05;
+            opacity: 0.78;
+            margin-bottom: 0.08rem;
+        }
+        .sr-details-value {
+            font-size: 0.98rem;
+            line-height: 1.05;
+            font-weight: 700;
+        }
+        .sr-details-explain {
+            font-size: 0.58rem;
+            line-height: 1.12;
+            opacity: 0.72;
+            margin-top: 0.07rem;
+        }
+        .sr-details-value.sr-good {
+            color: #4ecb71;
+        }
+        .sr-details-value.sr-moderate {
+            color: #f2c94c;
+        }
+        .sr-details-value.sr-weak {
+            color: #ff6b6b;
+        }
+        .sr-score-row {
+            margin-bottom: 0.16rem;
+        }
+        .sr-score-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.04rem;
+        }
+        .sr-score-label {
+            font-size: 0.6rem;
+            opacity: 0.75;
+        }
+        .sr-score-value {
+            font-size: 0.62rem;
+            font-weight: 700;
+            opacity: 0.86;
+        }
+        .sr-score-track {
+            width: 100%;
+            height: 0.34rem;
+            background: rgba(255,255,255,0.08);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .sr-score-fill {
+            height: 100%;
+            border-radius: 999px;
+        }
+        .sr-open-primary button {
+            border: 1px solid rgba(78, 203, 113, 0.55) !important;
+            background: linear-gradient(180deg, rgba(78,203,113,0.22), rgba(78,203,113,0.1)) !important;
+            font-weight: 650 !important;
+        }
+        @media (max-width: 1200px) {
+            .sr-hero-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .sr-details-value {
+                font-size: 0.9rem;
+            }
+        }
+        </style>
+        """.replace("__PANEL_MIN_HEIGHT__", panel_min_height),
+        unsafe_allow_html=True,
+    )
+
+
 def render_context_html_card(title: str, rows: list[tuple[str, str]], subtitle: str | None = None) -> None:
     st.markdown(
         """
@@ -568,163 +870,8 @@ def render_stock_details_panel(
 
     panel_min_height = f"{FAVORITES_PANEL_MIN_HEIGHT_REM:.1f}rem" if show_liquidity_context else "auto"
 
-    st.markdown(
-        """
-        <style>
-        .sr-workbench {
-            border: 1px solid rgba(128, 128, 128, 0.28);
-            border-radius: 0.68rem;
-            padding: 0.42rem 0.5rem;
-            min-height: __PANEL_MIN_HEIGHT__;
-            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-        }
-        .sr-hero {
-            border: 1px solid rgba(128, 128, 128, 0.22);
-            border-radius: 0.52rem;
-            padding: 0.34rem 0.42rem;
-            margin-bottom: 0.34rem;
-            background: rgba(255,255,255,0.02);
-        }
-        .sr-hero-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0.22rem;
-        }
-        .sr-hero-item {
-            border: 1px solid rgba(128, 128, 128, 0.18);
-            border-radius: 0.42rem;
-            padding: 0.2rem 0.28rem;
-            background: rgba(255,255,255,0.015);
-        }
-        .sr-hero-label {
-            font-size: 0.58rem;
-            line-height: 1.0;
-            opacity: 0.72;
-            margin-bottom: 0.06rem;
-        }
-        .sr-hero-value {
-            font-size: 0.8rem;
-            line-height: 1.08;
-            font-weight: 700;
-        }
-        .sr-pane {
-            border: 1px solid rgba(128, 128, 128, 0.22);
-            border-radius: 0.5rem;
-            padding: 0.28rem 0.34rem;
-            margin-bottom: 0.28rem;
-            background: rgba(255,255,255,0.015);
-        }
-        .sr-pane-title {
-            font-size: 0.66rem;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-            margin-bottom: 0.16rem;
-            opacity: 0.82;
-            font-weight: 700;
-        }
-        .sr-details-card {
-            border: 1px solid rgba(128, 128, 128, 0.25);
-            border-radius: 0.45rem;
-            padding: 0.2rem 0.32rem;
-            min-height: 2.05rem;
-            margin-bottom: 0.24rem;
-            background: rgba(255, 255, 255, 0.02);
-        }
-        .sr-details-label {
-            font-size: 0.66rem;
-            line-height: 1.05;
-            opacity: 0.78;
-            margin-bottom: 0.08rem;
-        }
-        .sr-details-value {
-            font-size: 0.98rem;
-            line-height: 1.05;
-            font-weight: 700;
-        }
-        .sr-details-explain {
-            font-size: 0.58rem;
-            line-height: 1.12;
-            opacity: 0.72;
-            margin-top: 0.07rem;
-        }
-        .sr-details-value.sr-good {
-            color: #4ecb71;
-        }
-        .sr-details-value.sr-moderate {
-            color: #f2c94c;
-        }
-        .sr-details-value.sr-weak {
-            color: #ff6b6b;
-        }
-        .sr-score-row {
-            margin-bottom: 0.16rem;
-        }
-        .sr-score-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.04rem;
-        }
-        .sr-score-label {
-            font-size: 0.6rem;
-            opacity: 0.75;
-        }
-        .sr-score-value {
-            font-size: 0.62rem;
-            font-weight: 700;
-            opacity: 0.86;
-        }
-        .sr-score-track {
-            width: 100%;
-            height: 0.34rem;
-            background: rgba(255,255,255,0.08);
-            border-radius: 999px;
-            overflow: hidden;
-        }
-        .sr-score-fill {
-            height: 100%;
-            border-radius: 999px;
-        }
-        .sr-open-primary button {
-            border: 1px solid rgba(78, 203, 113, 0.55) !important;
-            background: linear-gradient(180deg, rgba(78,203,113,0.22), rgba(78,203,113,0.1)) !important;
-            font-weight: 650 !important;
-        }
-        @media (max-width: 1200px) {
-            .sr-hero-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-            .sr-details-value {
-                font-size: 0.9rem;
-            }
-        }
-        </style>
-        """.replace("__PANEL_MIN_HEIGHT__", panel_min_height),
-        unsafe_allow_html=True,
-    )
+    _render_workbench_styles(panel_min_height)
 
-    if show_full_details:
-        header_col, action_col = st.columns([5, 2])
-        with header_col:
-            st.markdown(
-                (
-                    '<div class="stock-details-name">'
-                    '<div class="stock-details-name-label">Company</div>'
-                    f'<div class="stock-details-name-value">{company_name} ({ticker})</div>'
-                    f'<div class="stock-details-delta">Sector: {html.escape(sector)} · Industry: {html.escape(industry)}</div>'
-                    "</div>"
-                ),
-                unsafe_allow_html=True,
-            )
-        with action_col:
-            st.button(
-                favorite_label,
-                key=favorite_button_key,
-                on_click=on_toggle,
-                args=on_toggle_args,
-                help="Toggle favorite",
-                use_container_width=True,
-            )
     sales_yoy_pct = sales_yoy * 100 if sales_yoy is not None else None
     eps_yoy_pct = eps_yoy * 100 if eps_yoy is not None else None
 
@@ -748,15 +895,9 @@ def render_stock_details_panel(
         ("EV/EBITDA", ev_ebitda, f"{ev_ebitda:.2f}" if ev_ebitda is not None else "N/A"),
     ]
 
-    def _section_score(entries: list[tuple[str, object, str]]) -> float:
-        statuses = [_metric_status(label, raw, context) for label, raw, _ in entries]
-        if not statuses:
-            return 0.0
-        return sum(_score_from_status(s) for s in statuses) / len(statuses)
-
-    quality_score = _section_score(quality_metrics)
-    growth_score = _section_score(growth_metrics)
-    cashflow_score = _section_score(cashflow_metrics)
+    quality_score = _section_score(quality_metrics, context)
+    growth_score = _section_score(growth_metrics, context)
+    cashflow_score = _section_score(cashflow_metrics, context)
 
     risk_base = 85.0 if risk_profile == "low" else 68.0 if risk_profile == "moderate" else 45.0
     rr = _safe_float(metrics.get("risk_reward"))
@@ -772,45 +913,28 @@ def render_stock_details_panel(
     vol_txt = f"{vol_20d:.1f}%" if vol_20d is not None else "N/A"
     rr_txt = f"{rr:+.2f}" if rr is not None else "N/A"
 
+    _render_stock_header(
+        company_name,
+        ticker,
+        sector,
+        industry,
+        favorite_label,
+        favorite_button_key,
+        on_toggle,
+        on_toggle_args,
+        show_full_details,
+    )
+
     if not show_full_details:
-        header_col, name_col = st.columns([0.7, 6.3])
-        with header_col:
-            st.button(
-                favorite_label,
-                key=favorite_button_key,
-                on_click=on_toggle,
-                args=on_toggle_args,
-                help="Toggle favorite",
-                use_container_width=True,
-            )
-        with name_col:
-            st.markdown(
-                (
-                    '<div class="stock-details-name">'
-                    f'<div class="stock-details-name-value">{company_name} ({ticker})</div>'
-                    f'<div class="stock-details-delta">{html.escape(sector)} · {html.escape(industry)}</div>'
-                    "</div>"
-                ),
-                unsafe_allow_html=True,
-            )
-        _render_score_bar("Composite", composite_score)
-        _render_score_bar("Quality", quality_score)
-        _render_score_bar("Growth", growth_score)
-        _render_score_bar("Cash Flow", cashflow_score)
-        _render_score_bar("Risk", risk_score)
-        action_col = st.columns([4, 1])[0]
-        with action_col:
-            st.markdown('<div class="sr-open-primary">', unsafe_allow_html=True)
-            if st.button(
-                "Open Dedicated Stock View (Full Analysis)",
-                key=f"details-open-{universe}-{ticker}",
-                use_container_width=True,
-            ):
-                st.session_state["details_focus_universe"] = universe
-                st.session_state["details_focus_ticker"] = ticker
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        _render_compact_stock_panel(
+            universe,
+            ticker,
+            composite_score,
+            quality_score,
+            growth_score,
+            cashflow_score,
+            risk_score,
+        )
         return
 
     st.markdown('<div class="sr-workbench">', unsafe_allow_html=True)
@@ -843,60 +967,36 @@ def render_stock_details_panel(
 
     left_col, right_col = st.columns([1.3, 1.0])
     with left_col:
-        st.markdown('<div class="sr-pane"><div class="sr-pane-title">Quality</div>', unsafe_allow_html=True)
+        _pane_start("Quality")
         ql, qr = st.columns(2)
         with ql:
-            for label, raw, val in quality_metrics[:3]:
-                _render_colored_detail_card(
-                    label,
-                    val,
-                    _metric_status(label, raw, context),
-                    _metric_help_text(label, raw, context),
-                    _evaluate_metric_range(label, raw, context),
-                )
+            _render_metric_cards(quality_metrics[:3], context)
         with qr:
-            for label, raw, val in quality_metrics[3:]:
-                _render_colored_detail_card(
-                    label,
-                    val,
-                    _metric_status(label, raw, context),
-                    _metric_help_text(label, raw, context),
-                    _evaluate_metric_range(label, raw, context),
-                )
-        st.markdown('</div>', unsafe_allow_html=True)
+            _render_metric_cards(quality_metrics[3:], context)
+        _pane_end()
 
-        st.markdown('<div class="sr-pane"><div class="sr-pane-title">Growth</div>', unsafe_allow_html=True)
-        for label, raw, val in growth_metrics:
-            _render_colored_detail_card(
-                label,
-                val,
-                _metric_status(label, raw, context),
-                _metric_help_text(label, raw, context),
-                _evaluate_metric_range(label, raw, context),
-            )
-        st.markdown('</div>', unsafe_allow_html=True)
+        _pane_start("Growth")
+        _render_metric_cards(growth_metrics, context)
+        _pane_end()
 
-        st.markdown('<div class="sr-pane"><div class="sr-pane-title">Cash Flow</div>', unsafe_allow_html=True)
-        for label, raw, val in cashflow_metrics:
-            _render_colored_detail_card(
-                label,
-                val,
-                _metric_status(label, raw, context),
-                _metric_help_text(label, raw, context),
-                _evaluate_metric_range(label, raw, context),
-            )
-        st.markdown('</div>', unsafe_allow_html=True)
+        _pane_start("Cash Flow")
+        _render_metric_cards(cashflow_metrics, context)
+        _pane_end()
 
     with right_col:
-        st.markdown('<div class="sr-pane"><div class="sr-pane-title">Scoreboard</div>', unsafe_allow_html=True)
-        _render_score_bar("Quality", quality_score)
-        _render_score_bar("Growth", growth_score)
-        _render_score_bar("Cash Flow", cashflow_score)
-        _render_score_bar("Risk", risk_score)
-        _render_score_bar("Composite", composite_score)
-        st.markdown('</div>', unsafe_allow_html=True)
+        _pane_start("Scoreboard")
+        _render_score_bars(
+            [
+                ("Quality", quality_score),
+                ("Growth", growth_score),
+                ("Cash Flow", cashflow_score),
+                ("Risk", risk_score),
+                ("Composite", composite_score),
+            ]
+        )
+        _pane_end()
 
-        st.markdown('<div class="sr-pane"><div class="sr-pane-title">Trend Snapshot</div>', unsafe_allow_html=True)
+        _pane_start("Trend Snapshot")
         _render_colored_detail_card(
             "Risk/Reward",
             rr_txt,
@@ -911,48 +1011,17 @@ def render_stock_details_panel(
             "Beta measures sensitivity to broad market moves.",
             "Near 1.0 is balanced; much above 1.4 implies higher market sensitivity.",
         )
-        st.markdown('</div>', unsafe_allow_html=True)
+        _pane_end()
 
-        st.markdown('<div class="sr-pane"><div class="sr-pane-title">Trend Lenses</div>', unsafe_allow_html=True)
-        trend_rows: list[tuple[str, float]] = []
-        if change_20d is not None:
-            trend_rows.append(("Price 20D", change_20d))
-        liq_3m = _safe_float(metrics.get("liq_trend_3m_pct"))
-        liq_6m = _safe_float(metrics.get("liq_trend_6m_pct"))
-        liq_accel = _safe_float(metrics.get("liq_accel_weekly_pct"))
-        if liq_3m is not None:
-            trend_rows.append(("Liquidity 3M", liq_3m))
-        if liq_6m is not None:
-            trend_rows.append(("Liquidity 6M", liq_6m))
-        if liq_accel is not None:
-            trend_rows.append(("Liquidity Wk", liq_accel))
-        if not trend_rows:
-            trend_rows = [("Price 20D", 0.0)]
-        trend_df = pd.DataFrame(trend_rows, columns=["lens", "value"]).set_index("lens")
-        st.bar_chart(trend_df)
+        _render_trend_lenses_pane(metrics, change_20d, vol_20d, beta, rr)
 
-        risk_rows: list[tuple[str, float]] = []
-        if vol_20d is not None:
-            risk_rows.append(("Vol 20D", vol_20d))
-        exp_vol = _safe_float(metrics.get("exp_vol_ann_pct"))
-        exp_ret = _safe_float(metrics.get("exp_return_ann_pct"))
-        if exp_vol is not None:
-            risk_rows.append(("Exp Vol", exp_vol))
-        if exp_ret is not None:
-            risk_rows.append(("Exp Ret", exp_ret))
-        if beta is not None:
-            risk_rows.append(("Beta x10", beta * 10.0))
-        if rr is not None:
-            risk_rows.append(("R/R x10", rr * 10.0))
-        if not risk_rows:
-            risk_rows = [("Vol 20D", 0.0)]
-        risk_df = pd.DataFrame(risk_rows, columns=["lens", "value"]).set_index("lens")
-        st.bar_chart(risk_df)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        st.markdown('<div class="sr-pane"><div class="sr-pane-title">Relative Standing</div>', unsafe_allow_html=True)
-        _render_score_bar("Fundamental Percentile", (quality_score + growth_score + cashflow_score) / 3.0)
-        _render_score_bar("Risk-Adjusted Percentile", (risk_score + quality_score) / 2.0)
-        st.markdown('</div>', unsafe_allow_html=True)
+        _pane_start("Relative Standing")
+        _render_score_bars(
+            [
+                ("Fundamental Percentile", (quality_score + growth_score + cashflow_score) / 3.0),
+                ("Risk-Adjusted Percentile", (risk_score + quality_score) / 2.0),
+            ]
+        )
+        _pane_end()
 
     st.markdown('</div>', unsafe_allow_html=True)

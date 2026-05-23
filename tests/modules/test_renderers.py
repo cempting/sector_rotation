@@ -310,3 +310,49 @@ def test_render_stock_details_panel_compact_mode_omits_scorecard_callout(monkeyp
     assert "Technology" in rendered_text
     assert "Software" in rendered_text
     assert "★" in button_calls
+
+
+def test_render_stock_details_panel_full_mode_renders_header_and_favorite(monkeypatch):
+    markdown_calls = []
+    button_calls = []
+
+    class _ContextStub:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    def fake_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [_ContextStub() for _ in range(count)]
+
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.session_state", {})
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.columns", fake_columns)
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.button", lambda label, **kwargs: button_calls.append(label) or False)
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.markdown", lambda text, **kwargs: markdown_calls.append(text))
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.caption", lambda *args, **kwargs: None)
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.bar_chart", lambda *args, **kwargs: None)
+
+    render_stock_details_panel(
+        metrics={},
+        company_name="Example Corp",
+        ticker="EXM",
+        universe="S&P 500",
+        sector="Technology",
+        industry="Software",
+        show_liquidity_context=False,
+        show_full_details=True,
+        favorite_label="★",
+        favorite_button_key="favorite-S&P 500-EXM",
+        on_toggle=lambda *args, **kwargs: None,
+        on_toggle_args=("S&P 500", "EXM"),
+    )
+
+    rendered_text = "\n".join(str(text) for text in markdown_calls)
+    assert "Company" in rendered_text
+    assert "Example Corp" in rendered_text
+    assert "EXM" in rendered_text
+    assert "Sector: Technology" in rendered_text
+    assert "Industry: Software" in rendered_text
+    assert "★" in button_calls
