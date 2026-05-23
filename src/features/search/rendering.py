@@ -3,7 +3,7 @@
 import streamlit as st
 
 from ...core.data import search_all_universes
-from ...core.ui import render_stock_cards
+from ...core.ui import render_grouped_stock_sections, render_stock_cards
 
 
 def render_search_results_page(render_stock_cards_fn=None) -> None:
@@ -23,10 +23,7 @@ def render_search_results_page(render_stock_cards_fn=None) -> None:
     for match in matches:
         grouped.setdefault(match["universe"], []).append(match)
 
-    for universe_name, universe_matches in grouped.items():
-        st.markdown(f"**{universe_name}**")
-
-        tickers = list(dict.fromkeys(match["ticker"] for match in universe_matches))
+    def render_group_meta(_universe_name: str, universe_matches: list[dict[str, str]]) -> None:
         sectors = sorted({match.get("sector", "").strip() for match in universe_matches if match.get("sector", "").strip()})
         industries = sorted(
             {match.get("industry", "").strip() for match in universe_matches if match.get("industry", "").strip()}
@@ -40,8 +37,11 @@ def render_search_results_page(render_stock_cards_fn=None) -> None:
         if labels:
             st.caption(" | ".join(labels))
 
-        render_stock_cards_fn(
-            tickers=tickers,
-            selected_universe=universe_name,
-            empty_message="",
-        )
+    render_grouped_stock_sections(
+        grouped=grouped,
+        ticker_getter=lambda match: match["ticker"],
+        render_stock_cards_fn=render_stock_cards_fn,
+        focus_caption_prefix="Focused search result view",
+        render_group_meta_fn=render_group_meta,
+        empty_message="",
+    )

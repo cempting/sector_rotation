@@ -1,8 +1,11 @@
 import streamlit as st
+import pandas as pd
 from collections.abc import Callable
 
 from ...charts import render_stock_chart
-from ...core.data.data_retrieval import fetch_ticker_data_batch, get_universe_stock_name
+from ...core.data.data_retrieval import fetch_market_data_with_status, get_universe_stock_name
+from .dedicated_stock_view import dedicated_chart_size, render_dedicated_stock_view
+from .stock_focus import is_dedicated_focus_for_ticker
 from .view_config import (
     BASE_CHART_WIDTH,
     DEFAULT_STOCK_CHART_SIZE,
@@ -44,30 +47,9 @@ def render_stock_cards(
     active_layout = normalize_row_layout(row_layout, show_liquidity_context)
     liquidity_chart_height = chart_height if chart_height is not None else LIQUIDITY_STOCK_CHART_DEFAULT_HEIGHT
 
-    focus_universe = st.session_state.get("details_focus_universe")
-    focus_ticker = st.session_state.get("details_focus_ticker")
-
-    focus_mode = bool(
-        focus_universe == selected_universe and focus_ticker and focus_ticker in tickers
-    )
+    focus_ticker = is_dedicated_focus_for_ticker(selected_universe, tickers)
+    focus_mode = bool(focus_ticker)
     render_tickers = [focus_ticker] if focus_mode else tickers
-
-    if focus_mode:
-        opening_ticker = st.session_state.get("details_opening_ticker")
-        if opening_ticker == focus_ticker:
-            st.caption(f"Opening dedicated view for {focus_ticker}...")
-            st.session_state.pop("details_opening_ticker", None)
-        head_col, _spacer = st.columns([1, 7])
-        with head_col:
-            if st.button(
-                "Back",
-                key=f"details-focus-back-{selected_universe}",
-                use_container_width=True,
-            ):
-                st.session_state.pop("details_focus_universe", None)
-                st.session_state.pop("details_focus_ticker", None)
-                st.rerun()
-        st.caption(f"Dedicated stock view · {focus_ticker}")
 
     for row_start in range(0, len(render_tickers), stocks_per_row):
         row_tickers = render_tickers[row_start:row_start + stocks_per_row]
@@ -75,7 +57,16 @@ def render_stock_cards(
         for col_idx, ticker in enumerate(row_tickers):
             with cols[col_idx]:
                 with st.spinner(f"Loading {ticker}..."):
-                    _, df = fetch_ticker_data_batch(ticker, False)
+                    data_map, status_map = fetch_market_data_with_status(
+                        [ticker],
+                        force_refresh=False,
+                        use_cache=True,
+                        allow_stale_cache_fallback=True,
+                    )
+                    df = data_map.get(ticker, pd.DataFrame())
+                    data_status = status_map.get(ticker, {})
+                status_label = str(data_status.get("label", "No data"))
+                st.caption(f"Data freshness: {status_label}")
                 if df.empty or "Close" not in df.columns or "Volume" not in df.columns:
                     st.write(f"{ticker} could not be loaded")
                     continue
@@ -87,39 +78,55 @@ def render_stock_cards(
                 macro = macro_impact_snapshot(ticker) if show_liquidity_context else {}
                 recent = recent_info_snapshot(selected_universe, ticker) if show_liquidity_context else {}
 
-                columns = st.columns([width for _, width in active_layout])
-                for (slot, _), slot_col in zip(active_layout, columns):
-                    with slot_col:
-                        if slot == "chart":
-                            chart_size = (
+                def render_slot(slot: str) -> None:
+                    if slot == "chart":
+                        chart_size = (
+                            dedicated_chart_size(liquidity_chart_height)
+                            if focus_mode
+                            else (
                                 (BASE_CHART_WIDTH, liquidity_chart_height)
                                 if show_liquidity_context
                                 else DEFAULT_STOCK_CHART_SIZE
                             )
-                            render_stock_chart(df, ticker, figsize=chart_size)
-                            continue
+                        )
+                        render_stock_chart(df, ticker, figsize=chart_size)
+                        return
 
-                        if not metrics:
-                            if slot == "details":
-                                st.caption("No snapshot metrics available.")
-                            elif slot == "macro":
-                                st.caption("No liquidity context available.")
-                            elif slot == "recent":
-                                st.caption("No recent information available.")
-                            continue
-
+                    if not metrics:
                         if slot == "details":
-                            render_stock_details_panel(
-                                metrics,
-                                company_name,
-                                ticker,
-                                selected_universe,
-                                sector=classification.get("sector", "N/A"),
-                                industry=classification.get("industry", "N/A"),
-                                show_liquidity_context=show_liquidity_context,
-                                show_full_details=focus_mode,
-                            )
+                            st.caption("No snapshot metrics available.")
                         elif slot == "macro":
-                            render_macro_context_card(metrics, macro, recent=recent)
+                            st.caption("No liquidity context available.")
                         elif slot == "recent":
-                            render_recent_information_card(recent)
+                            st.caption("No recent information available.")
+                        return
+
+                    if slot == "details":
+                        render_stock_details_panel(
+                            metrics,
+                            company_name,
+                            ticker,
+                            selected_universe,
+                            sector=classification.get("sector", "N/A"),
+                            industry=classification.get("industry", "N/A"),
+                            show_liquidity_context=show_liquidity_context,
+                            show_full_details=focus_mode,
+                        )
+                    elif slot == "macro":
+                        render_macro_context_card(metrics, macro, recent=recent)
+                    elif slot == "recent":
+                        render_recent_information_card(recent)
+
+                if focus_mode:
+                    render_dedicated_stock_view(
+                        selected_universe=selected_universe,
+                        focus_ticker=ticker,
+                        show_liquidity_context=show_liquidity_context,
+                        render_slot=render_slot,
+                    )
+                    continue
+
+                columns = st.columns([width for _, width in active_layout])
+                for (slot, _), slot_col in zip(active_layout, columns):
+                    with slot_col:
+                        render_slot(slot)

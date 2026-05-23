@@ -1,4 +1,5 @@
 from .data import (
+    fetch_market_data_with_status,
     fetch_sector_data,
     fetch_industry_counts,
     fetch_industry_tickers,
@@ -17,6 +18,7 @@ from .universe import (
 )
 
 __all__ = [
+    "fetch_market_data_with_status",
     "fetch_sector_data",
     "fetch_industry_counts",
     "fetch_industry_tickers",

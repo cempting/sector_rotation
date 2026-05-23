@@ -67,3 +67,38 @@ def test_render_search_results_page_groups_by_universe(monkeypatch):
     ]
     assert any("Sectors: Technology" in c for c in captions)
     assert any("Industries: Hardware, Software" in c for c in captions)
+
+
+def test_render_search_results_page_focuses_matching_universe(monkeypatch):
+    session_state = _SessionState(
+        search_query="a",
+        details_focus_universe="NASDAQ",
+        details_focus_ticker="AMZN",
+    )
+    rendered = []
+    markdown_calls = []
+    captions = []
+
+    matches = [
+        {"universe": "S&P 500", "ticker": "AAPL", "sector": "Technology", "industry": "Hardware"},
+        {"universe": "NASDAQ", "ticker": "AMZN", "sector": "Consumer Disc", "industry": "Internet Retail"},
+        {"universe": "NASDAQ", "ticker": "NVDA", "sector": "Technology", "industry": "Semiconductors"},
+    ]
+
+    monkeypatch.setattr(rendering.st, "session_state", session_state)
+    monkeypatch.setattr(rendering, "search_all_universes", lambda *args, **kwargs: matches)
+    monkeypatch.setattr(rendering.st, "subheader", lambda *args, **kwargs: None)
+    monkeypatch.setattr(rendering.st, "caption", lambda text, *args, **kwargs: captions.append(text))
+    monkeypatch.setattr(rendering.st, "info", lambda *args, **kwargs: None)
+    monkeypatch.setattr(rendering.st, "markdown", lambda text, **kwargs: markdown_calls.append(text))
+
+    def fake_cards(**kwargs):
+        rendered.append(kwargs)
+
+    rendering.render_search_results_page(render_stock_cards_fn=fake_cards)
+
+    assert markdown_calls == ["**NASDAQ**"]
+    assert rendered == [
+        {"tickers": ["AMZN", "NVDA"], "selected_universe": "NASDAQ", "empty_message": ""},
+    ]
+    assert any("Focused search result view" in c for c in captions)

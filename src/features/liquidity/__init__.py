@@ -1,4 +1,5 @@
-"""Liquidity analysis feature."""
+"""Backward-compatible aliases for the renamed suggestions feature."""
+
 from .rendering import liquidity_refresh_tickers, render_liquidity_chessboard
 from .view import LiquidityView
 

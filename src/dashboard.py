@@ -2,13 +2,14 @@ import streamlit as st
 
 from .core.data import list_universes
 from .core.data.cache import clear_tickers_cache
+from .core.data.download_status import get_download_status, is_download_blocked
 from .features import FeatureRegistry
 
 _ROUTE_BY_FEATURE = {
     "browse": "sector_industry_stocks",
     "search": "search",
     "favorites": "favorites",
-    "liquidity": "liquidity",
+    "suggestions": "suggestions",
 }
 
 # ── mobile-friendly top-nav CSS ───────────────────────────────────────────────
@@ -75,7 +76,9 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 
 def _feature_for_view(view: str) -> str:
-    if view in {"favorites", "search", "liquidity"}:
+    if view in {"favorites", "search", "suggestions", "liquidity"}:
+        if view == "liquidity":
+            return "suggestions"
         return view
     return "browse"
 
@@ -85,8 +88,8 @@ def _set_view_for_feature(feature: str) -> None:
         st.session_state.view = "favorites"
     elif feature == "search":
         st.session_state.view = "search"
-    elif feature == "liquidity":
-        st.session_state.view = "liquidity"
+    elif feature == "suggestions":
+        st.session_state.view = "suggestions"
     else:
         st.session_state.view = "sector"
 
@@ -143,10 +146,32 @@ def _render_top_nav() -> str:
     st.session_state.selected_universe = selected_universe
 
     with refresh_col:
-        refresh_tickers = feature.get_refresh_tickers(selected_universe)
         if st.button("🔄", key="nav_refresh", help="Refresh live data", use_container_width=True):
+            if is_download_blocked("yfinance"):
+                st.warning("Refresh is temporarily blocked due to Yahoo Finance rate limits.")
+                st.rerun()
+            refresh_tickers = feature.get_refresh_tickers(selected_universe)
             clear_tickers_cache(refresh_tickers)
+            on_manual_refresh = getattr(feature, "on_manual_refresh", None)
+            if callable(on_manual_refresh):
+                on_manual_refresh(selected_universe)
             st.rerun()
+
+    status = get_download_status(max_age_seconds=3600)
+    if status:
+        level = str(status.get("level", "ok"))
+        message = str(status.get("message", ""))
+        icon = "✅"
+        if level == "rate_limited":
+            icon = "⛔"
+            retry_after = int(status.get("retry_after_seconds", 0) or 0)
+            if retry_after > 0:
+                message = f"{message} Retry in about {max(1, retry_after // 60)} min."
+        elif level == "warning":
+            icon = "⚠️"
+        elif level == "error":
+            icon = "❌"
+        st.caption(f"{icon} Data status: {message}")
 
     st.markdown('</div>', unsafe_allow_html=True)
     return selected_universe

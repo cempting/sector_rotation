@@ -1,5 +1,7 @@
 """Sector/Industry/Stocks browsing feature."""
 
+import html
+
 import streamlit as st
 
 from ...core.ui.interface import FeatureView
@@ -65,10 +67,11 @@ class SectorIndustryStocksView(FeatureView):
 
             csv_industries = get_universe_industries(new_universe, None)
             industry_options = ["— all industries —"] + csv_industries
-            current_industry = st.session_state.get("selected_industry", "— all industries —")
-            st.session_state["nav_industry"] = (
-                current_industry if current_industry in industry_options else "— all industries —"
-            )
+            if st.session_state.get("nav_industry") not in industry_options:
+                current_industry = st.session_state.get("selected_industry", "— all industries —")
+                st.session_state["nav_industry"] = (
+                    current_industry if current_industry in industry_options else "— all industries —"
+                )
             with nav_industry_col:
                 selected_industry = st.selectbox(
                     "Industry",
@@ -93,10 +96,11 @@ class SectorIndustryStocksView(FeatureView):
                 st.session_state.selected_industry = selected_industry
                 industry_tickers = get_universe_tickers(new_universe, industry=selected_industry)
                 stock_options = ["— all stocks —"] + industry_tickers
-                current_stock = st.session_state.get("selected_stock", "— all stocks —")
-                st.session_state["nav_stock"] = (
-                    current_stock if current_stock in stock_options else "— all stocks —"
-                )
+                if st.session_state.get("nav_stock") not in stock_options:
+                    current_stock = st.session_state.get("selected_stock", "— all stocks —")
+                    st.session_state["nav_stock"] = (
+                        current_stock if current_stock in stock_options else "— all stocks —"
+                    )
                 with nav_stock_col:
                     selected_stock = st.selectbox(
                         "Stock",
@@ -111,11 +115,14 @@ class SectorIndustryStocksView(FeatureView):
                     st.session_state.selected_stock = selected_stock
                 st.session_state.view = "industry_stocks"
 
+            self._render_active_selection_hint(new_universe)
+
             return new_universe
 
         sector_options = ["— all sectors —"] + csv_sectors
-        current_sector = st.session_state.get("selected_sector", "— all sectors —")
-        st.session_state["nav_sector"] = current_sector if current_sector in sector_options else "— all sectors —"
+        if st.session_state.get("nav_sector") not in sector_options:
+            current_sector = st.session_state.get("selected_sector", "— all sectors —")
+            st.session_state["nav_sector"] = current_sector if current_sector in sector_options else "— all sectors —"
 
         with nav_sector_col:
             sector_select_col, sector_info_col = st.columns([10, 1])
@@ -153,6 +160,7 @@ class SectorIndustryStocksView(FeatureView):
                     disabled=True,
                     label_visibility="collapsed",
                 )
+            self._render_active_selection_hint(new_universe)
             return new_universe
 
         st.session_state.selected_sector = selected_sector
@@ -160,8 +168,11 @@ class SectorIndustryStocksView(FeatureView):
 
         csv_industries = get_universe_industries(new_universe, selected_sector)
         industry_options = ["— all industries —"] + csv_industries
-        current_industry = st.session_state.get("selected_industry", "— all industries —")
-        st.session_state["nav_industry"] = current_industry if current_industry in industry_options else "— all industries —"
+        if st.session_state.get("nav_industry") not in industry_options:
+            current_industry = st.session_state.get("selected_industry", "— all industries —")
+            st.session_state["nav_industry"] = (
+                current_industry if current_industry in industry_options else "— all industries —"
+            )
         with nav_industry_col:
             selected_industry = st.selectbox(
                 "Industry",
@@ -190,10 +201,11 @@ class SectorIndustryStocksView(FeatureView):
                 industry=selected_industry,
             )
             stock_options = ["— all stocks —"] + industry_tickers
-            current_stock = st.session_state.get("selected_stock", "— all stocks —")
-            st.session_state["nav_stock"] = (
-                current_stock if current_stock in stock_options else "— all stocks —"
-            )
+            if st.session_state.get("nav_stock") not in stock_options:
+                current_stock = st.session_state.get("selected_stock", "— all stocks —")
+                st.session_state["nav_stock"] = (
+                    current_stock if current_stock in stock_options else "— all stocks —"
+                )
 
             with nav_stock_col:
                 selected_stock = st.selectbox(
@@ -208,6 +220,8 @@ class SectorIndustryStocksView(FeatureView):
             else:
                 st.session_state.selected_stock = selected_stock
             st.session_state.view = "industry_stocks"
+
+        self._render_active_selection_hint(new_universe)
 
         return new_universe
 
@@ -259,6 +273,84 @@ class SectorIndustryStocksView(FeatureView):
             label = "Unclassified" if industry == "undefined" else industry
             details.append(f"{label}: {count}")
         return details
+
+    @staticmethod
+    def _active_selection_label(universe: str) -> str:
+        sector = st.session_state.get("selected_sector")
+        industry = st.session_state.get("selected_industry")
+        stock = st.session_state.get("selected_stock")
+
+        parts = [f"Universe: {universe}"]
+        if sector:
+            parts.append(f"Sector: {sector}")
+        if industry:
+            parts.append(f"Industry: {industry}")
+        if stock:
+            parts.append(f"Stock: {stock}")
+        return "Active selection - " + " | ".join(parts)
+
+    @staticmethod
+    def _render_active_selection_hint(universe: str) -> None:
+        sector = st.session_state.get("selected_sector")
+        industry = st.session_state.get("selected_industry")
+        stock = st.session_state.get("selected_stock")
+
+        # Subtle page tint by depth of selection to make scope changes obvious.
+        if stock:
+            page_tint = "rgba(214, 199, 159, 0.12)"
+        elif industry:
+            page_tint = "rgba(155, 202, 178, 0.11)"
+        elif sector:
+            page_tint = "rgba(152, 185, 217, 0.10)"
+        else:
+            page_tint = "rgba(213, 219, 227, 0.07)"
+
+        chips = [
+            '<span class="sr-active-chip sr-chip-universe">Universe: ' + html.escape(str(universe)) + "</span>"
+        ]
+        if sector:
+            chips.append('<span class="sr-active-chip sr-chip-sector">Sector: ' + html.escape(str(sector)) + "</span>")
+        if industry:
+            chips.append(
+                '<span class="sr-active-chip sr-chip-industry">Industry: ' + html.escape(str(industry)) + "</span>"
+            )
+        if stock:
+            chips.append('<span class="sr-active-chip sr-chip-stock">Stock: ' + html.escape(str(stock)) + "</span>")
+
+        st.markdown(
+            """
+            <style>
+            [data-testid="stAppViewContainer"] {
+                background-image: linear-gradient(180deg, VAR_PAGE_TINT 0%, rgba(0, 0, 0, 0) 42%);
+                background-attachment: fixed;
+            }
+            .sr-active-hint {
+                font-size: 0.72rem;
+                line-height: 1.35;
+                opacity: 0.85;
+                margin-top: 0.1rem;
+            }
+            .sr-active-chip {
+                display: inline-block;
+                margin-right: 0.28rem;
+                margin-bottom: 0.16rem;
+                padding: 0.1rem 0.35rem;
+                border-radius: 0.45rem;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                background: rgba(255, 255, 255, 0.03);
+            }
+            .sr-chip-universe { color: #d5dbe3; }
+            .sr-chip-sector { color: #98b9d9; }
+            .sr-chip-industry { color: #9bcab2; }
+            .sr-chip-stock { color: #d6c79f; }
+            </style>
+            """.replace("VAR_PAGE_TINT", page_tint),
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            '<div class="sr-active-hint">' + " ".join(chips) + "</div>",
+            unsafe_allow_html=True,
+        )
 
     def render(
         self,

@@ -20,12 +20,12 @@ class FeatureRegistry:
 
         from .sector_industry_stocks import SectorIndustryStocksView
         from .favorites import FavoritesView
-        from .liquidity import LiquidityView
+        from .suggestions import SuggestionsView
         from .search import SearchResultsView
 
         cls.register_feature(SectorIndustryStocksView)
         cls.register_feature(FavoritesView)
-        cls.register_feature(LiquidityView)
+        cls.register_feature(SuggestionsView)
         cls.register_feature(SearchResultsView)
 
         cls._initialized = True

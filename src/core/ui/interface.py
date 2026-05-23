@@ -46,6 +46,10 @@ class FeatureView(ABC):
         """Return kwargs used when invoking feature `render(...)`."""
         return {}
 
+    def on_manual_refresh(self, selected_universe: str) -> None:
+        """Optional hook invoked when the top-nav refresh button is pressed."""
+        _ = selected_universe
+
 
 class ViewRenderer(ABC):
     """Interface for rendering individual UI components."""

@@ -31,6 +31,18 @@ FLOATING_GRID_COLS = 3
 FLOATING_CHART_FIGSIZE = (4.0, 1.55)
 
 
+def open_sector_industries(sector: str) -> None:
+    """Open industry view for a sector and synchronize nav/session state."""
+    st.session_state["nav_feature"] = "browse"
+    st.session_state.view = "industry"
+    st.session_state.selected_sector = sector
+    st.session_state.nav_sector = sector
+    st.session_state.pop("selected_industry", None)
+    st.session_state.pop("nav_industry", None)
+    st.session_state.pop("selected_stock", None)
+    st.session_state.pop("nav_stock", None)
+
+
 def _render_floating_grid_styles() -> None:
     st.markdown(
         f"""
@@ -229,9 +241,7 @@ def render_sector_industry_summary(universe: str, sector: str) -> None:
 
 def render_sector_card(name: str, ticker: str) -> None:
     def open_industry_view() -> None:
-        st.session_state.view = "industry"
-        st.session_state.selected_sector = name
-        st.session_state.pop("selected_industry", None)
+        open_sector_industries(name)
 
     with st.spinner(f"Loading {name}..."):
         df = fetch_sector_data(ticker)
@@ -302,9 +312,7 @@ def _render_stock_list_controls(
 
 def _render_universe_sector_card(universe: str, sector: str) -> None:
     def open_industry_view() -> None:
-        st.session_state.view = "industry"
-        st.session_state.selected_sector = sector
-        st.session_state.pop("selected_industry", None)
+        open_sector_industries(sector)
 
     st.subheader(sector)
     btn_col, info_col = st.columns([4, 1])

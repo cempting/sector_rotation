@@ -5,6 +5,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from .stock_focus import open_dedicated_stock_view
 from .view_config import FAVORITES_PANEL_MIN_HEIGHT_REM
 
 
@@ -357,8 +358,7 @@ def _render_compact_stock_panel(
             key=f"details-open-{universe}-{ticker}",
             use_container_width=True,
         ):
-            st.session_state["details_focus_universe"] = universe
-            st.session_state["details_focus_ticker"] = ticker
+            open_dedicated_stock_view(universe, ticker)
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)

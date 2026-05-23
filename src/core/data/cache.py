@@ -36,19 +36,39 @@ MIN_CACHE_ROWS = 20  # reject obviously invalid/test cache entries
 CACHE_MAX_AGE_SECONDS = 24 * 60 * 60
 
 
+def _read_cache_file(path: Path, allow_expired: bool = False) -> pd.DataFrame | None:
+    if not path.exists():
+        return None
+    try:
+        if not allow_expired and time.time() - path.stat().st_mtime > CACHE_MAX_AGE_SECONDS:
+            return None
+        df = pd.read_parquet(path)
+        if df is not None and len(df) >= MIN_CACHE_ROWS and "Close" in df.columns:
+            return df
+        return None
+    except Exception:
+        return None
+
+
+def get_ticker_cache_age_seconds(ticker: str) -> int | None:
+    path = _ticker_cache_path(ticker)
+    if not path.exists():
+        return None
+    try:
+        return int(max(0, time.time() - path.stat().st_mtime))
+    except Exception:
+        return None
+
+
 def load_ticker_from_cache(ticker: str) -> pd.DataFrame | None:
     path = _ticker_cache_path(ticker)
-    if path.exists():
-        try:
-            if time.time() - path.stat().st_mtime > CACHE_MAX_AGE_SECONDS:
-                return None
-            df = pd.read_parquet(path)
-            if df is not None and len(df) >= MIN_CACHE_ROWS and "Close" in df.columns:
-                return df
-            return None
-        except Exception:
-            return None
-    return None
+    return _read_cache_file(path, allow_expired=False)
+
+
+def load_ticker_from_cache_any_age(ticker: str) -> pd.DataFrame | None:
+    """Load cached data even if it is older than the freshness threshold."""
+    path = _ticker_cache_path(ticker)
+    return _read_cache_file(path, allow_expired=True)
 
 
 def save_ticker_to_cache(ticker: str, df: pd.DataFrame) -> None:
