@@ -61,11 +61,12 @@ def get_universe_sectors(universe_name: str) -> list[str]:
     return sorted(sectors)
 
 
-def get_universe_industries(universe_name: str, sector: str) -> list[str]:
-    """Return sorted list of unique industries for a sector in a universe."""
+def get_universe_industries(universe_name: str, sector: str | None = None) -> list[str]:
+    """Return sorted list of unique industries for a sector or whole universe."""
     df = load_universe(universe_name)
-    mask = df['Sector'] == sector
-    industries = df.loc[mask, 'Industry'].dropna().loc[lambda s: s != ''].unique()
+    if sector:
+        df = df.loc[df['Sector'] == sector]
+    industries = df['Industry'].dropna().loc[lambda s: s != ''].unique()
     return sorted(industries)
 
 

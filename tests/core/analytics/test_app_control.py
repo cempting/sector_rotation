@@ -13,7 +13,7 @@ class _SessionState(dict):
 
 
 def test_open_industry_stocks_sets_navigation_state(monkeypatch):
-    session_state = _SessionState()
+    session_state = _SessionState(selected_stock="AAPL")
     monkeypatch.setattr(app_control.st, "session_state", session_state)
 
     app_control.open_industry_stocks("Technology", "Software")
@@ -21,6 +21,7 @@ def test_open_industry_stocks_sets_navigation_state(monkeypatch):
     assert session_state["view"] == "industry_stocks"
     assert session_state["selected_sector"] == "Technology"
     assert session_state["selected_industry"] == "Software"
+    assert "selected_stock" not in session_state
 
 
 def test_nav_to_industry_stocks_button_uses_default_key(monkeypatch):

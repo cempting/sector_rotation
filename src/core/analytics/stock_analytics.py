@@ -24,6 +24,15 @@ def as_series(values: pd.Series | pd.DataFrame | None) -> pd.Series:
     return pd.Series(dtype=float)
 
 
+def _latest_table_value(table: pd.DataFrame, row_name: str) -> float | None:
+    if not isinstance(table, pd.DataFrame) or table.empty or row_name not in table.index:
+        return None
+    series = pd.to_numeric(table.loc[row_name], errors="coerce").dropna()
+    if series.empty:
+        return None
+    return float(series.iloc[0])
+
+
 def compute_return_vol_rr(close: pd.Series, lookback: int = 30) -> dict[str, float]:
     """Compute annualized expected return, volatility, and simple risk/reward ratio."""
     if close is None or close.empty:
@@ -392,14 +401,89 @@ def compute_stock_metrics(df: pd.DataFrame, ticker: str, ticker_factory=yf.Ticke
         metrics.update({
             "market_cap": info.get("marketCap"),
             "pe_ratio": info.get("trailingPE"),
+            "forward_pe": info.get("forwardPE"),
             "dividend_yield": info.get("dividendYield"),
             "pb_ratio": info.get("priceToBook"),
+            "ps_ratio": info.get("priceToSalesTrailing12Months"),
+            "peg_ratio": info.get("pegRatio"),
+            "ev_ebitda": info.get("enterpriseToEbitda"),
+            "revenue_growth_yoy": info.get("revenueGrowth"),
+            "earnings_growth_yoy": info.get("earningsGrowth"),
+            "beta": info.get("beta"),
             "debt_to_equity": info.get("debtToEquity"),
             "roe": info.get("returnOnEquity"),
             "roa": info.get("returnOnAssets"),
             "eps_trailing": info.get("trailingEps"),
             "eps_forward": info.get("forwardEps"),
             "dividend_per_share": info.get("dividendRate"),
+        })
+
+        revenue_ttm = info.get("totalRevenue")
+        free_cash_flow = info.get("freeCashflow")
+
+        try:
+            financials = tick.financials
+            balance_sheet = tick.balance_sheet
+            cashflow = tick.cashflow
+
+            total_revenue = _latest_table_value(financials, "Total Revenue")
+            gross_profit = _latest_table_value(financials, "Gross Profit")
+            operating_income = _latest_table_value(financials, "Operating Income")
+            ebit = _latest_table_value(financials, "EBIT")
+            total_assets = _latest_table_value(balance_sheet, "Total Assets")
+            current_liabilities = _latest_table_value(balance_sheet, "Current Liabilities")
+            free_cash_flow = _latest_table_value(cashflow, "Free Cash Flow") or free_cash_flow
+
+            if total_revenue is not None:
+                revenue_ttm = total_revenue
+
+            gross_margin = None
+            operating_margin = None
+            if total_revenue and total_revenue > 0:
+                if gross_profit is not None:
+                    gross_margin = gross_profit / total_revenue * 100.0
+                if operating_income is not None:
+                    operating_margin = operating_income / total_revenue * 100.0
+
+            roce = None
+            if ebit is not None and total_assets is not None and current_liabilities is not None:
+                capital_employed = total_assets - current_liabilities
+                if capital_employed:
+                    roce = ebit / capital_employed * 100.0
+
+            metrics.update({
+                "gross_margin": gross_margin,
+                "operating_margin": operating_margin,
+                "roce": roce,
+                "free_cash_flow": free_cash_flow,
+                "revenue_ttm": revenue_ttm,
+            })
+        except Exception:
+            metrics.update({
+                "gross_margin": None,
+                "operating_margin": None,
+                "roce": None,
+                "free_cash_flow": free_cash_flow,
+                "revenue_ttm": revenue_ttm,
+            })
+
+        fcf_margin = None
+        if free_cash_flow is not None and revenue_ttm:
+            try:
+                fcf_margin = float(free_cash_flow) / float(revenue_ttm) * 100.0
+            except Exception:
+                fcf_margin = None
+
+        fcf_yield = None
+        if free_cash_flow is not None and info.get("marketCap"):
+            try:
+                fcf_yield = float(free_cash_flow) / float(info.get("marketCap")) * 100.0
+            except Exception:
+                fcf_yield = None
+
+        metrics.update({
+            "fcf_margin": fcf_margin,
+            "fcf_yield": fcf_yield,
         })
 
         try:

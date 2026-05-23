@@ -1,7 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
-from scipy.stats import linregress
+import numpy as np
 from .constants import (
     DEFAULT_FONTSIZE,
     FIGSIZE_FONTSIZE_THRESHOLD,
@@ -18,18 +18,72 @@ from .constants import (
 
 
 def get_trend_colors(ma_series: pd.Series, lookback: int = TREND_LOOKBACK_DAYS) -> tuple[str, str]:
+    if isinstance(ma_series, pd.DataFrame):
+        if ma_series.empty:
+            return "#444444", "#cccccc"
+
+        numeric = ma_series.apply(pd.to_numeric, errors="coerce")
+        if numeric.empty:
+            return "#444444", "#cccccc"
+
+        non_null_counts = numeric.notna().sum(axis=0)
+        if non_null_counts.empty or int(non_null_counts.max()) == 0:
+            return "#444444", "#cccccc"
+
+        ma_series = numeric.loc[:, non_null_counts.idxmax()]
+
     recent_ma = ma_series.dropna().tail(lookback)
     if len(recent_ma) <= MIN_TREND_LENGTH:
         return "#444444", "#cccccc"
 
-    x = range(len(recent_ma))
-    slope = linregress(x, recent_ma).slope
+    if recent_ma.nunique(dropna=True) <= 1:
+        return "#444444", "#cccccc"
+
+    x = np.arange(len(recent_ma), dtype=float)
+    y = pd.to_numeric(recent_ma, errors="coerce").to_numpy(dtype=float)
+    if len(x) < 2 or np.isclose(np.ptp(x), 0.0):
+        return "#444444", "#cccccc"
+
+    try:
+        slope = float(np.polyfit(x, y, 1)[0])
+    except (TypeError, ValueError, np.linalg.LinAlgError):
+        return "#444444", "#cccccc"
+
     if slope < TREND_SLOPE_THRESHOLD:
         return "#8b2020", "#ffaaaa"
     return "#1a6b1a", "#aaffaa"
 
 
+def _coerce_numeric_series(values: pd.Series | pd.DataFrame, ticker: str | None = None) -> pd.Series:
+    if isinstance(values, pd.Series):
+        return pd.to_numeric(values, errors="coerce").dropna()
+
+    if isinstance(values, pd.DataFrame):
+        if values.empty:
+            return pd.Series(dtype=float)
+
+        numeric = values.apply(pd.to_numeric, errors="coerce")
+        if numeric.empty:
+            return pd.Series(dtype=float)
+
+        non_null_counts = numeric.notna().sum(axis=0)
+        if non_null_counts.empty or int(non_null_counts.max()) == 0:
+            return pd.Series(dtype=float)
+
+        if ticker and ticker in numeric.columns:
+            selected = numeric[ticker]
+        else:
+            selected = numeric.loc[:, non_null_counts.idxmax()]
+        return selected.dropna()
+
+    return pd.Series(dtype=float)
+
+
 def render_volume_bars(ax: plt.Axes, volume: pd.Series, bar_color: str, fontsize: int = DEFAULT_FONTSIZE) -> None:
+    volume = _coerce_numeric_series(volume)
+    if volume.empty:
+        return
+
     if volume.max() > 0:
         ax.bar(volume.index, volume.values, color=bar_color, alpha=VOLUME_BAR_ALPHA, width=VOLUME_BAR_WIDTH)
         ax.set_ylim(0, volume.max() * VOLUME_SCALE_FACTOR)
@@ -41,6 +95,8 @@ def render_volume_bars(ax: plt.Axes, volume: pd.Series, bar_color: str, fontsize
 def render_chart(close: pd.Series, volume: pd.Series, ma_series: pd.Series,
                  bg_color: str, bar_color: str, y_label: str = "Price",
                  legend_label: str = "Price", figsize: tuple = SECTOR_FIGSIZE) -> None:
+    close = _coerce_numeric_series(close)
+    volume = _coerce_numeric_series(volume).reindex(close.index).fillna(0) if not close.empty else pd.Series(dtype=float)
     fig, ax1 = plt.subplots(figsize=figsize)
     fig.patch.set_facecolor(bg_color)
     ax1.set_facecolor(bg_color)
@@ -64,31 +120,6 @@ def render_sector_chart(df: pd.DataFrame, close: pd.Series, ma50: pd.Series, bg_
     volume = df['Volume'].squeeze()
     render_chart(close, volume, ma50, bg_color, bar_color,
                  y_label="Price", legend_label="Price", figsize=SECTOR_FIGSIZE)
-
-
-def _coerce_numeric_series(values: pd.Series | pd.DataFrame, ticker: str) -> pd.Series:
-    if isinstance(values, pd.Series):
-        return pd.to_numeric(values, errors='coerce').dropna()
-
-    if isinstance(values, pd.DataFrame):
-        if values.empty:
-            return pd.Series(dtype=float)
-
-        numeric = values.apply(pd.to_numeric, errors='coerce')
-        if numeric.empty:
-            return pd.Series(dtype=float)
-
-        non_null_counts = numeric.notna().sum(axis=0)
-        if non_null_counts.empty or int(non_null_counts.max()) == 0:
-            return pd.Series(dtype=float)
-
-        if ticker in numeric.columns:
-            selected = numeric[ticker]
-        else:
-            selected = numeric.loc[:, non_null_counts.idxmax()]
-        return selected.dropna()
-
-    return pd.Series(dtype=float)
 
 
 def render_stock_chart(df: pd.DataFrame, ticker: str, figsize: tuple[float, float] = (8, 5.8)) -> None:

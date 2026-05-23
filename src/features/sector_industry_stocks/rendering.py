@@ -5,32 +5,78 @@ import streamlit as st
 
 from ...charts import get_trend_colors, render_chart
 from ...core.analytics import compute_industry_aggregate, compute_return_vol_rr as compute_return_vol_rr_core
-from ...core.constants import INDUSTRY_GRID_COLS, SECTOR_FIGSIZE, SECTOR_GRID_COLS, resolve_sector_proxy_ticker
+from ...core.constants import (
+    INDUSTRY_GRID_COLS,
+    SECTOR_FIGSIZE,
+    SECTOR_GRID_COLS,
+    resolve_industry_proxy_ticker,
+    resolve_sector_proxy_ticker,
+)
 from ...core.data import (
     fetch_sector_data,
     get_sector_industry_counts,
+    get_universe_industries,
     get_universe_sector_stock_count,
     get_universe_sectors,
     get_universe_tickers,
+    load_universe,
 )
 from ...core.navigation import open_industry_stocks
 from ...core.ui import render_data_card, render_stock_cards
 
 
+FLOATING_CARD_WIDTH_PX = 400
+FLOATING_CARD_HEIGHT_PX = 200
+FLOATING_GRID_COLS = 3
+FLOATING_CHART_FIGSIZE = (4.0, 1.55)
+
+
+def _render_floating_grid_styles() -> None:
+    st.markdown(
+        f"""
+        <style>
+        .sector-floating-note {{
+            font-size: 0.74rem;
+            opacity: 0.72;
+            margin-bottom: 0.35rem;
+        }}
+        .sector-floating-card [data-testid="stVerticalBlockBorderWrapper"] {{
+            min-height: {FLOATING_CARD_HEIGHT_PX}px;
+        }}
+        .sector-floating-card h3 {{
+            font-size: 0.92rem !important;
+            margin-bottom: 0.1rem !important;
+        }}
+        .sector-floating-card .stCaption {{
+            font-size: 0.68rem !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_sector_grid(universe: str) -> None:
+    _render_floating_grid_styles()
     universe_sectors = get_universe_sectors(universe)
-    cols = st.columns(SECTOR_GRID_COLS)
+    st.markdown(
+        f'<div class="sector-floating-note">Floating sector overview tuned for about {FLOATING_CARD_WIDTH_PX}x{FLOATING_CARD_HEIGHT_PX}px cards.</div>',
+        unsafe_allow_html=True,
+    )
+    cols = st.columns(FLOATING_GRID_COLS)
     for i, sector_name in enumerate(universe_sectors):
-        with cols[i % SECTOR_GRID_COLS]:
+        with cols[i % FLOATING_GRID_COLS]:
+            st.markdown('<div class="sector-floating-card">', unsafe_allow_html=True)
             etf_ticker = resolve_sector_proxy_ticker(universe, sector_name)
             if etf_ticker:
                 render_sector_card(sector_name, etf_ticker)
             else:
                 _render_universe_sector_card(universe, sector_name)
+            st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_industry_dashboard(
-    sector: str,
+    sector: str | None,
     compute_return_vol_rr=None,
     render_data_card_fn=None,
     open_industry_stocks_fn=None,
@@ -40,7 +86,18 @@ def render_industry_dashboard(
     open_industry_stocks_fn = open_industry_stocks_fn or open_industry_stocks
 
     selected_universe = st.session_state.get("selected_universe", "S&P 500")
-    counts = get_sector_industry_counts(selected_universe, sector)
+    _render_floating_grid_styles()
+    if sector:
+        counts = get_sector_industry_counts(selected_universe, sector)
+    else:
+        df = load_universe(selected_universe)
+        counts = (
+            df.loc[df["Industry"].astype(str).str.strip() != ""]
+            .groupby("Industry", sort=False)
+            .size()
+            .sort_index()
+            .to_dict()
+        )
     industries = [ind for ind in counts if ind != "undefined"]
     undef_count = counts.get("undefined", 0)
     total = sum(counts.values())
@@ -54,29 +111,56 @@ def render_industry_dashboard(
         + (f" · **{undef_count} unclassified**" if undef_count else "")
     )
 
-    columns = st.columns(INDUSTRY_GRID_COLS)
+    st.markdown(
+        f'<div class="sector-floating-note">Floating industry overview tuned for about {FLOATING_CARD_WIDTH_PX}x{FLOATING_CARD_HEIGHT_PX}px cards.</div>',
+        unsafe_allow_html=True,
+    )
+    columns = st.columns(FLOATING_GRID_COLS)
     for i, industry in enumerate(industries):
-        with columns[i % INDUSTRY_GRID_COLS]:
+        with columns[i % FLOATING_GRID_COLS]:
+            st.markdown('<div class="sector-floating-card">', unsafe_allow_html=True)
             tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
             count = len(tickers)
+            proxy_ticker = resolve_industry_proxy_ticker(selected_universe, sector, industry)
 
-            if tickers:
-                with st.spinner(f"Building {industry} aggregate..."):
-                    avg_close, total_volume, _ = compute_industry_aggregate(tickers)
-                risk_metrics = compute_return_vol_rr(avg_close, lookback=30)
-                render_data_card_fn(
-                    title=f"{industry} ({count})",
-                    close=avg_close,
-                    volume=total_volume,
-                    chart_params={"y_label": "Index", "legend_label": "Index", "figsize": (4, 2.5)},
-                )
-                st.caption(
-                    f"Exp Vol (30D ann): {risk_metrics['exp_vol_ann_pct']:.1f}% · "
-                    f"Risk/Reward: {risk_metrics['risk_reward']:+.2f}"
-                )
-            else:
-                st.subheader(f"{industry} ({count})")
-                st.caption("No data")
+            if proxy_ticker:
+                with st.spinner(f"Loading {industry} proxy {proxy_ticker}..."):
+                    proxy_df = fetch_sector_data(proxy_ticker)
+                if not proxy_df.empty and "Close" in proxy_df.columns:
+                    proxy_close = proxy_df["Close"]
+                    proxy_volume = proxy_df["Volume"] if "Volume" in proxy_df.columns else pd.Series(dtype=float)
+                    risk_metrics = compute_return_vol_rr(proxy_close, lookback=30)
+                    render_data_card_fn(
+                        title=f"{industry} ({proxy_ticker})",
+                        close=proxy_close,
+                        volume=proxy_volume,
+                        chart_params={"y_label": "Index", "legend_label": proxy_ticker, "figsize": FLOATING_CHART_FIGSIZE},
+                    )
+                    st.caption(
+                        f"Proxy ETF: {proxy_ticker} · Exp Vol (30D ann): {risk_metrics['exp_vol_ann_pct']:.1f}% · "
+                        f"Risk/Reward: {risk_metrics['risk_reward']:+.2f}"
+                    )
+                else:
+                    proxy_ticker = None
+
+            if not proxy_ticker:
+                if tickers:
+                    with st.spinner(f"Building {industry} aggregate..."):
+                        avg_close, total_volume, _ = compute_industry_aggregate(tickers)
+                    risk_metrics = compute_return_vol_rr(avg_close, lookback=30)
+                    render_data_card_fn(
+                        title=f"{industry} ({count})",
+                        close=avg_close,
+                        volume=total_volume,
+                        chart_params={"y_label": "Index", "legend_label": "Index", "figsize": FLOATING_CHART_FIGSIZE},
+                    )
+                    st.caption(
+                        f"Exp Vol (30D ann): {risk_metrics['exp_vol_ann_pct']:.1f}% · "
+                        f"Risk/Reward: {risk_metrics['risk_reward']:+.2f}"
+                    )
+                else:
+                    st.subheader(f"{industry} ({count})")
+                    st.caption("No data")
 
             _render_stock_list_controls(
                 sector=sector,
@@ -86,11 +170,13 @@ def render_industry_dashboard(
                 tickers=tickers,
                 open_industry_stocks_fn=open_industry_stocks_fn,
             )
+            st.markdown('</div>', unsafe_allow_html=True)
 
     if undef_count:
         undef_tickers = get_universe_tickers(selected_universe, sector=sector, industry="undefined")
-        col_idx = len(industries) % INDUSTRY_GRID_COLS
+        col_idx = len(industries) % FLOATING_GRID_COLS
         with columns[col_idx]:
+            st.markdown('<div class="sector-floating-card">', unsafe_allow_html=True)
             st.subheader(f"Unclassified ({undef_count})")
             st.caption("No industry assigned")
             _render_stock_list_controls(
@@ -101,13 +187,21 @@ def render_industry_dashboard(
                 tickers=undef_tickers,
                 open_industry_stocks_fn=open_industry_stocks_fn,
             )
+            st.markdown('</div>', unsafe_allow_html=True)
 
 
-def render_industry_stock_page(sector: str, industry: str, render_stock_cards_fn=None) -> None:
+def render_industry_stock_page(
+    sector: str | None,
+    industry: str,
+    stock: str | None = None,
+    render_stock_cards_fn=None,
+) -> None:
     render_stock_cards_fn = render_stock_cards_fn or render_stock_cards
 
     selected_universe = st.session_state.get("selected_universe", "S&P 500")
     all_tickers = get_universe_tickers(selected_universe, sector=sector, industry=industry)
+    if stock:
+        all_tickers = [ticker for ticker in all_tickers if ticker == stock]
     st.caption(f"{len(all_tickers)} stocks in {selected_universe}")
     render_stock_cards_fn(
         tickers=all_tickers,
@@ -182,7 +276,7 @@ def render_sector_card(name: str, ticker: str) -> None:
 
 def _render_stock_list_controls(
     *,
-    sector: str,
+    sector: str | None,
     industry: str,
     title: str,
     count: int,
@@ -193,7 +287,7 @@ def _render_stock_list_controls(
     with btn_col:
         st.button(
             "View Stocks",
-            key=f"stocks-{sector}-{industry}",
+            key=f"stocks-{sector or 'all'}-{industry}",
             on_click=open_industry_stocks_fn,
             args=(sector, industry),
             use_container_width=True,

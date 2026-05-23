@@ -44,8 +44,33 @@ def render_stock_cards(
     active_layout = normalize_row_layout(row_layout, show_liquidity_context)
     liquidity_chart_height = chart_height if chart_height is not None else LIQUIDITY_STOCK_CHART_DEFAULT_HEIGHT
 
-    for row_start in range(0, len(tickers), stocks_per_row):
-        row_tickers = tickers[row_start:row_start + stocks_per_row]
+    focus_universe = st.session_state.get("details_focus_universe")
+    focus_ticker = st.session_state.get("details_focus_ticker")
+
+    focus_mode = bool(
+        focus_universe == selected_universe and focus_ticker and focus_ticker in tickers
+    )
+    render_tickers = [focus_ticker] if focus_mode else tickers
+
+    if focus_mode:
+        opening_ticker = st.session_state.get("details_opening_ticker")
+        if opening_ticker == focus_ticker:
+            st.caption(f"Opening dedicated view for {focus_ticker}...")
+            st.session_state.pop("details_opening_ticker", None)
+        head_col, _spacer = st.columns([1, 7])
+        with head_col:
+            if st.button(
+                "Back",
+                key=f"details-focus-back-{selected_universe}",
+                use_container_width=True,
+            ):
+                st.session_state.pop("details_focus_universe", None)
+                st.session_state.pop("details_focus_ticker", None)
+                st.rerun()
+        st.caption(f"Dedicated stock view · {focus_ticker}")
+
+    for row_start in range(0, len(render_tickers), stocks_per_row):
+        row_tickers = render_tickers[row_start:row_start + stocks_per_row]
         cols = st.columns(stocks_per_row)
         for col_idx, ticker in enumerate(row_tickers):
             with cols[col_idx]:
@@ -92,6 +117,7 @@ def render_stock_cards(
                                 sector=classification.get("sector", "N/A"),
                                 industry=classification.get("industry", "N/A"),
                                 show_liquidity_context=show_liquidity_context,
+                                show_full_details=focus_mode,
                             )
                         elif slot == "macro":
                             render_macro_context_card(metrics, macro, recent=recent)

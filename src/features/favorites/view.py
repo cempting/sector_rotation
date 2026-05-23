@@ -25,7 +25,7 @@ class FavoritesView(FeatureView):
 
     def render_nav_controls(self, selected_universe: str) -> str:
         st.markdown('<div class="favorites-controls">', unsafe_allow_html=True)
-        export_col, import_file_col, merge_col, import_btn_col = st.columns([2, 4, 1, 2])
+        export_col, import_file_col, merge_col, compact_col, import_btn_col = st.columns([2, 4, 1, 2, 2])
         with export_col:
             st.download_button(
                 "Export",
@@ -48,6 +48,18 @@ class FavoritesView(FeatureView):
                 value=True,
                 key="nav_favorites_import_merge",
             )
+        with compact_col:
+            compact_mode = st.checkbox(
+                "Compact",
+                value=st.session_state.get("nav_favorites_compact_mode", False),
+                key="nav_favorites_compact_mode",
+                help="Show scorecards only. Click a card to open dedicated stock view.",
+            )
+            if not compact_mode:
+                st.session_state.pop("favorites_focus_universe", None)
+                st.session_state.pop("favorites_focus_ticker", None)
+                st.session_state.pop("details_focus_universe", None)
+                st.session_state.pop("details_focus_ticker", None)
         with import_btn_col:
             if st.button("Import", key="nav_favorites_import_apply", use_container_width=False):
                 if uploaded_file is None:
@@ -73,4 +85,8 @@ class FavoritesView(FeatureView):
 
     def render(self) -> None:
         """Render the favorites page showing all saved favorite stocks."""
-        render_favorites_page()
+        render_favorites_page(
+            compact_mode=st.session_state.get("nav_favorites_compact_mode", False),
+            focused_universe=st.session_state.get("favorites_focus_universe"),
+            focused_ticker=st.session_state.get("favorites_focus_ticker"),
+        )

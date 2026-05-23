@@ -3,9 +3,9 @@ from typing import Literal, TypeAlias
 StockRowSlot: TypeAlias = Literal["chart", "details", "macro", "recent"]
 StockRowLayout: TypeAlias = list[tuple[StockRowSlot, float]]
 
-BASE_CHART_WIDTH = 5.0
-DEFAULT_STOCK_CHART_SIZE = (BASE_CHART_WIDTH, 5.0)
-LIQUIDITY_STOCK_CHART_DEFAULT_HEIGHT = 5.0
+BASE_CHART_WIDTH = 4.0
+DEFAULT_STOCK_CHART_SIZE = (BASE_CHART_WIDTH, 2.8)
+LIQUIDITY_STOCK_CHART_DEFAULT_HEIGHT = 4.0
 REM_PER_MATPLOTLIB_INCH = 5
 
 DEFAULT_BASIC_ROW_LAYOUT: StockRowLayout = [("chart", 1.0), ("details", 1.0)]

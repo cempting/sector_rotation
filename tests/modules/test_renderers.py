@@ -9,6 +9,8 @@ from sector_rotation.src.renderers import (
     _format_fundamental,
     _news_topic,
 )
+from sector_rotation.src.charts import get_trend_colors
+from sector_rotation.src.core.ui.view_components import render_stock_details_panel
 
 
 def test_safe_format_numeric_and_nan():
@@ -216,6 +218,22 @@ def test_render_data_card_calls_chart(monkeypatch):
     assert any(call[0] == "chart" for call in calls)
 
 
+def test_render_data_card_handles_dataframe_volume(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr("sector_rotation.src.renderers.st.subheader", lambda title: calls.append(("subheader", title)))
+    monkeypatch.setattr("sector_rotation.src.renderers.st.write", lambda *args, **kwargs: calls.append(("write", args)))
+    monkeypatch.setattr("sector_rotation.src.renderers.render_chart", lambda *args, **kwargs: calls.append(("chart", args)))
+
+    close = pd.Series([1, 2, 3, 4, 5])
+    volume = pd.DataFrame({"A": [10, 20, 30, 40, 50], "B": [None, None, None, None, None]})
+
+    render_data_card("My Title", close, volume, subtitle="sub", metadata="meta")
+
+    assert ("subheader", "My Title") in calls
+    assert any(call[0] == "chart" for call in calls)
+
+
 def test_compute_return_vol_rr_outputs_expected_fields():
     close = pd.Series(np.linspace(100, 120, 80))
 
@@ -232,3 +250,63 @@ def test_news_topic_classifies_recent_headlines():
     assert _news_topic("Inflation data points to cooling economy") == "Economy"
     assert _news_topic("Broker upgrade lifts target price") == "Rating"
     assert _news_topic("Company launches new product") == "General"
+
+
+def test_get_trend_colors_handles_flat_series():
+    colors = get_trend_colors(pd.Series([100.0] * 10))
+
+    assert colors == ("#444444", "#cccccc")
+
+
+def test_get_trend_colors_handles_dataframe_input():
+    frame = pd.DataFrame({"A": [100.0] * 10, "B": [None] * 10})
+
+    colors = get_trend_colors(frame)
+
+    assert colors == ("#444444", "#cccccc")
+
+
+def test_render_stock_details_panel_compact_mode_omits_scorecard_callout(monkeypatch):
+    markdown_calls = []
+    button_calls = []
+
+    class _ContextStub:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    def fake_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [_ContextStub() for _ in range(count)]
+
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.session_state", {})
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.columns", fake_columns)
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.button", lambda label, **kwargs: button_calls.append(label) or False)
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.markdown", lambda text, **kwargs: markdown_calls.append(text))
+    monkeypatch.setattr("sector_rotation.src.core.ui.view_components.st.caption", lambda *args, **kwargs: None)
+
+    render_stock_details_panel(
+        metrics={},
+        company_name="Example Corp",
+        ticker="EXM",
+        universe="S&P 500",
+        sector="Technology",
+        industry="Software",
+        show_liquidity_context=False,
+        show_full_details=False,
+        favorite_label="★",
+        favorite_button_key="favorite-S&P 500-EXM",
+        on_toggle=lambda *args, **kwargs: None,
+        on_toggle_args=("S&P 500", "EXM"),
+    )
+
+    rendered_text = "\n".join(str(text) for text in markdown_calls)
+    assert "Scorecard" not in rendered_text
+    assert "Click to open full dedicated analysis" not in rendered_text
+    assert "Example Corp" in rendered_text
+    assert "EXM" in rendered_text
+    assert "Technology" in rendered_text
+    assert "Software" in rendered_text
+    assert "★" in button_calls

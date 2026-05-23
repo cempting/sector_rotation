@@ -29,7 +29,7 @@ class SectorIndustryStocksView(FeatureView):
         if "nav_universe" not in st.session_state or st.session_state.get("nav_universe") not in universes:
             st.session_state["nav_universe"] = selected_universe if selected_universe in universes else universes[0]
 
-        nav_universe_col, nav_sector_col, nav_industry_col = st.columns([4, 4, 4])
+        nav_universe_col, nav_sector_col, nav_industry_col, nav_stock_col = st.columns([3, 3, 3, 3])
 
         with nav_universe_col:
             new_universe = st.selectbox(
@@ -42,12 +42,77 @@ class SectorIndustryStocksView(FeatureView):
         if new_universe != selected_universe:
             st.session_state.pop("selected_sector", None)
             st.session_state.pop("selected_industry", None)
+            st.session_state.pop("selected_stock", None)
             st.session_state.pop("nav_sector", None)
             st.session_state.pop("nav_industry", None)
+            st.session_state.pop("nav_stock", None)
             st.session_state.view = "sector"
         st.session_state.selected_universe = new_universe
 
         csv_sectors = get_universe_sectors(new_universe)
+        if not csv_sectors:
+            st.session_state.pop("selected_sector", None)
+            st.session_state.pop("nav_sector", None)
+            st.session_state.view = "industry"
+
+            with nav_sector_col:
+                st.selectbox(
+                    "Sector",
+                    ["No sector breakdown"],
+                    disabled=True,
+                    label_visibility="collapsed",
+                )
+
+            csv_industries = get_universe_industries(new_universe, None)
+            industry_options = ["— all industries —"] + csv_industries
+            current_industry = st.session_state.get("selected_industry", "— all industries —")
+            st.session_state["nav_industry"] = (
+                current_industry if current_industry in industry_options else "— all industries —"
+            )
+            with nav_industry_col:
+                selected_industry = st.selectbox(
+                    "Industry",
+                    industry_options,
+                    key="nav_industry",
+                    label_visibility="collapsed",
+                )
+
+            if selected_industry == "— all industries —":
+                st.session_state.pop("selected_industry", None)
+                st.session_state.pop("selected_stock", None)
+                st.session_state.pop("nav_stock", None)
+                st.session_state.view = "industry"
+                with nav_stock_col:
+                    st.selectbox(
+                        "Stock",
+                        ["— all stocks —"],
+                        disabled=True,
+                        label_visibility="collapsed",
+                    )
+            else:
+                st.session_state.selected_industry = selected_industry
+                industry_tickers = get_universe_tickers(new_universe, industry=selected_industry)
+                stock_options = ["— all stocks —"] + industry_tickers
+                current_stock = st.session_state.get("selected_stock", "— all stocks —")
+                st.session_state["nav_stock"] = (
+                    current_stock if current_stock in stock_options else "— all stocks —"
+                )
+                with nav_stock_col:
+                    selected_stock = st.selectbox(
+                        "Stock",
+                        stock_options,
+                        key="nav_stock",
+                        label_visibility="collapsed",
+                    )
+
+                if selected_stock == "— all stocks —":
+                    st.session_state.pop("selected_stock", None)
+                else:
+                    st.session_state.selected_stock = selected_stock
+                st.session_state.view = "industry_stocks"
+
+            return new_universe
+
         sector_options = ["— all sectors —"] + csv_sectors
         current_sector = st.session_state.get("selected_sector", "— all sectors —")
         st.session_state["nav_sector"] = current_sector if current_sector in sector_options else "— all sectors —"
@@ -72,11 +137,19 @@ class SectorIndustryStocksView(FeatureView):
         if selected_sector == "— all sectors —":
             st.session_state.pop("selected_sector", None)
             st.session_state.pop("selected_industry", None)
+            st.session_state.pop("selected_stock", None)
             st.session_state.view = "sector"
             with nav_industry_col:
                 st.selectbox(
                     "Industry",
                     ["— all industries —"],
+                    disabled=True,
+                    label_visibility="collapsed",
+                )
+            with nav_stock_col:
+                st.selectbox(
+                    "Stock",
+                    ["— all stocks —"],
                     disabled=True,
                     label_visibility="collapsed",
                 )
@@ -99,9 +172,41 @@ class SectorIndustryStocksView(FeatureView):
 
         if selected_industry == "— all industries —":
             st.session_state.pop("selected_industry", None)
+            st.session_state.pop("selected_stock", None)
+            st.session_state.pop("nav_stock", None)
             st.session_state.view = "industry"
+            with nav_stock_col:
+                st.selectbox(
+                    "Stock",
+                    ["— all stocks —"],
+                    disabled=True,
+                    label_visibility="collapsed",
+                )
         else:
             st.session_state.selected_industry = selected_industry
+            industry_tickers = get_universe_tickers(
+                new_universe,
+                sector=selected_sector,
+                industry=selected_industry,
+            )
+            stock_options = ["— all stocks —"] + industry_tickers
+            current_stock = st.session_state.get("selected_stock", "— all stocks —")
+            st.session_state["nav_stock"] = (
+                current_stock if current_stock in stock_options else "— all stocks —"
+            )
+
+            with nav_stock_col:
+                selected_stock = st.selectbox(
+                    "Stock",
+                    stock_options,
+                    key="nav_stock",
+                    label_visibility="collapsed",
+                )
+
+            if selected_stock == "— all stocks —":
+                st.session_state.pop("selected_stock", None)
+            else:
+                st.session_state.selected_stock = selected_stock
             st.session_state.view = "industry_stocks"
 
         return new_universe
@@ -112,7 +217,17 @@ class SectorIndustryStocksView(FeatureView):
         industry = st.session_state.get("selected_industry")
 
         if view == "industry_stocks" and sector and industry:
+            selected_stock = st.session_state.get("selected_stock")
+            if selected_stock:
+                return [selected_stock]
             return get_universe_tickers(selected_universe, sector=sector, industry=industry)
+        if view == "industry_stocks" and industry:
+            selected_stock = st.session_state.get("selected_stock")
+            if selected_stock:
+                return [selected_stock]
+            return get_universe_tickers(selected_universe, industry=industry)
+        if view == "industry" and industry and not sector:
+            return get_universe_tickers(selected_universe, industry=industry)
         if view == "industry" and sector:
             return get_universe_tickers(selected_universe, sector=sector)
         return get_universe_tickers(selected_universe)
@@ -122,6 +237,7 @@ class SectorIndustryStocksView(FeatureView):
             "universe": selected_universe,
             "sector": st.session_state.get("selected_sector"),
             "industry": st.session_state.get("selected_industry"),
+            "stock": st.session_state.get("selected_stock"),
         }
 
     @staticmethod
@@ -144,7 +260,13 @@ class SectorIndustryStocksView(FeatureView):
             details.append(f"{label}: {count}")
         return details
 
-    def render(self, universe: str, sector: str | None = None, industry: str | None = None) -> None:
+    def render(
+        self,
+        universe: str,
+        sector: str | None = None,
+        industry: str | None = None,
+        stock: str | None = None,
+    ) -> None:
         """Render the appropriate sector/industry/stocks view based on selected scope.
         
         Args:
@@ -153,8 +275,11 @@ class SectorIndustryStocksView(FeatureView):
             industry: Optional selected industry; only valid if sector is also set
         """
         if sector and industry:
-            render_industry_stock_page(sector, industry)
+            render_industry_stock_page(sector, industry, stock=stock)
         elif sector:
             render_industry_dashboard(sector)
         else:
-            render_sector_grid(universe)
+            if get_universe_sectors(universe):
+                render_sector_grid(universe)
+            else:
+                render_industry_dashboard(None)

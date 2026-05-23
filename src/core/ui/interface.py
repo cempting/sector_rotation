@@ -70,12 +70,12 @@ class ViewRenderer(ABC):
         pass
     
     @abstractmethod
-    def render_industry_dashboard(self, sector: str) -> None:
-        """Render an industry dashboard for a sector."""
+    def render_industry_dashboard(self, sector: Optional[str]) -> None:
+        """Render an industry dashboard for a sector or market-wide industry view."""
         pass
     
     @abstractmethod
-    def render_industry_stock_page(self, sector: str, industry: str) -> None:
+    def render_industry_stock_page(self, sector: Optional[str], industry: str) -> None:
         """Render the industry stock listing page."""
         pass
 

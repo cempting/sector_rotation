@@ -1,4 +1,7 @@
+import pandas as pd
+
 from sector_rotation.src import dashboard, renderers
+from sector_rotation.src.constants import resolve_industry_proxy_ticker
 from sector_rotation.src.features import FeatureRegistry
 from sector_rotation.src.features.sector_industry_stocks import rendering as sector_rendering
 from sector_rotation.src.features.sector_industry_stocks import view as sector_view
@@ -199,3 +202,170 @@ def test_render_top_nav_uses_feature_refresh_tickers(monkeypatch):
     dashboard._render_top_nav()
 
     assert calls["cleared"] == ["AAPL", "MSFT"]
+
+
+def test_sector_nav_controls_support_stock_dropdown(monkeypatch):
+    session_state = _SessionState(
+        selected_universe="S&P 500",
+        selected_sector="Technology",
+        selected_industry="Software",
+        selected_stock="MSFT",
+        view="sector",
+    )
+
+    def fake_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [_ContextStub() for _ in range(count)]
+
+    def fake_popover(*args, **kwargs):
+        return _ContextStub()
+
+    def fake_selectbox(label, options, key=None, **kwargs):
+        value = session_state.get(key, options[0]) if key else options[0]
+        if key is not None:
+            session_state[key] = value
+        return value
+
+    monkeypatch.setattr(sector_view.st, "session_state", session_state)
+    monkeypatch.setattr(sector_view.st, "columns", fake_columns)
+    monkeypatch.setattr(sector_view.st, "selectbox", fake_selectbox)
+    monkeypatch.setattr(sector_view.st, "popover", fake_popover)
+    monkeypatch.setattr(sector_view.st, "markdown", lambda *args, **kwargs: None)
+    monkeypatch.setattr(sector_view.st, "caption", lambda *args, **kwargs: None)
+
+    monkeypatch.setattr(sector_view, "list_universes", lambda: ["S&P 500"])
+    monkeypatch.setattr(sector_view, "get_universe_sectors", lambda u: ["Technology"])
+    monkeypatch.setattr(sector_view, "get_universe_industries", lambda u, s: ["Software"])
+    monkeypatch.setattr(
+        sector_view,
+        "get_universe_tickers",
+        lambda u, sector=None, industry=None: ["MSFT", "AAPL"],
+    )
+    monkeypatch.setattr(sector_view, "get_sector_industry_counts", lambda u, s: {"Software": 2})
+    monkeypatch.setattr(sector_view, "get_universe_sector_stock_count", lambda u, s: 2)
+
+    selected_universe = SectorIndustryStocksView().render_nav_controls("S&P 500")
+
+    assert selected_universe == "S&P 500"
+    assert session_state["selected_sector"] == "Technology"
+    assert session_state["selected_industry"] == "Software"
+    assert session_state["selected_stock"] == "MSFT"
+    assert session_state["view"] == "industry_stocks"
+
+
+def test_sector_view_refresh_tickers_honors_selected_stock(monkeypatch):
+    session_state = _SessionState(
+        view="industry_stocks",
+        selected_sector="Technology",
+        selected_industry="Software",
+        selected_stock="MSFT",
+    )
+    monkeypatch.setattr(sector_view.st, "session_state", session_state)
+
+    tickers = SectorIndustryStocksView().get_refresh_tickers("S&P 500")
+
+    assert tickers == ["MSFT"]
+
+
+def test_sector_nav_controls_without_sectors_goes_directly_to_industries(monkeypatch):
+    session_state = _SessionState(
+        selected_universe="Custom Universe",
+        selected_industry="Semiconductors",
+        selected_stock="NVDA",
+        view="sector",
+    )
+
+    def fake_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [_ContextStub() for _ in range(count)]
+
+    def fake_selectbox(label, options, key=None, **kwargs):
+        value = session_state.get(key, options[0]) if key else options[0]
+        if key is not None:
+            session_state[key] = value
+        return value
+
+    monkeypatch.setattr(sector_view.st, "session_state", session_state)
+    monkeypatch.setattr(sector_view.st, "columns", fake_columns)
+    monkeypatch.setattr(sector_view.st, "selectbox", fake_selectbox)
+    monkeypatch.setattr(sector_view.st, "markdown", lambda *args, **kwargs: None)
+    monkeypatch.setattr(sector_view.st, "caption", lambda *args, **kwargs: None)
+
+    monkeypatch.setattr(sector_view, "list_universes", lambda: ["Custom Universe"])
+    monkeypatch.setattr(sector_view, "get_universe_sectors", lambda u: [])
+    monkeypatch.setattr(sector_view, "get_universe_industries", lambda u, s=None: ["Semiconductors"])
+    monkeypatch.setattr(
+        sector_view,
+        "get_universe_tickers",
+        lambda u, sector=None, industry=None: ["NVDA", "AMD"],
+    )
+
+    selected_universe = SectorIndustryStocksView().render_nav_controls("Custom Universe")
+
+    assert selected_universe == "Custom Universe"
+    assert "selected_sector" not in session_state
+    assert session_state["selected_industry"] == "Semiconductors"
+    assert session_state["selected_stock"] == "NVDA"
+    assert session_state["view"] == "industry_stocks"
+
+
+def test_sector_view_without_sectors_renders_industry_dashboard(monkeypatch):
+    calls = {}
+
+    monkeypatch.setattr(sector_view, "get_universe_sectors", lambda u: [])
+
+    def fake_render(sector):
+        calls["sector"] = sector
+
+    monkeypatch.setattr(sector_view, "render_industry_dashboard", fake_render)
+
+    SectorIndustryStocksView().render(universe="Custom Universe")
+
+    assert calls["sector"] is None
+
+
+def test_resolve_industry_proxy_ticker_uses_representative_etfs():
+    assert resolve_industry_proxy_ticker("S&P 500", "Technology", "Semiconductors") == "SMH"
+    assert resolve_industry_proxy_ticker("STOXX Europe 600", "Financial Services", "Banks") == "EXV1.DE"
+
+
+def test_industry_dashboard_uses_proxy_etf_data_when_available(monkeypatch):
+    session_state = _SessionState(selected_universe="S&P 500")
+    captured = {}
+
+    def fake_columns(spec):
+        count = spec if isinstance(spec, int) else len(spec)
+        return [_ContextStub() for _ in range(count)]
+
+    def fake_popover(*args, **kwargs):
+        return _ContextStub()
+
+    def fake_spinner(*args, **kwargs):
+        return _ContextStub()
+
+    def fake_render_data_card(**kwargs):
+        captured["title"] = kwargs["title"]
+        captured["legend_label"] = kwargs["chart_params"]["legend_label"]
+
+    monkeypatch.setattr(sector_rendering.st, "session_state", session_state)
+    monkeypatch.setattr(sector_rendering.st, "columns", fake_columns)
+    monkeypatch.setattr(sector_rendering.st, "popover", fake_popover)
+    monkeypatch.setattr(sector_rendering.st, "spinner", fake_spinner)
+    monkeypatch.setattr(sector_rendering.st, "markdown", lambda *args, **kwargs: None)
+    monkeypatch.setattr(sector_rendering.st, "caption", lambda *args, **kwargs: None)
+    monkeypatch.setattr(sector_rendering.st, "button", lambda *args, **kwargs: False)
+    monkeypatch.setattr(sector_rendering.st, "subheader", lambda *args, **kwargs: None)
+    monkeypatch.setattr(sector_rendering, "get_sector_industry_counts", lambda universe, sector: {"Semiconductors": 12})
+    monkeypatch.setattr(sector_rendering, "get_universe_tickers", lambda *args, **kwargs: ["NVDA", "AMD"])
+    monkeypatch.setattr(
+        sector_rendering,
+        "fetch_sector_data",
+        lambda ticker, period="1y": pd.DataFrame({"Close": [100.0, 101.0, 102.0], "Volume": [10, 12, 14]}),
+    )
+    monkeypatch.setattr(sector_rendering, "compute_industry_aggregate", lambda tickers: (_ for _ in ()).throw(AssertionError("should use proxy ETF data")))
+    monkeypatch.setattr(sector_rendering, "render_data_card", fake_render_data_card)
+
+    sector_rendering.render_industry_dashboard("Technology")
+
+    assert captured["title"] == "Semiconductors (SMH)"
+    assert captured["legend_label"] == "SMH"

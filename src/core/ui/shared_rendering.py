@@ -84,6 +84,7 @@ def _render_stock_details_panel(
     sector: str = "N/A",
     industry: str = "N/A",
     show_liquidity_context: bool = False,
+    show_full_details: bool = False,
 ) -> None:
     is_now_favorite = is_favorite(universe, ticker)
     favorite_label = "★" if is_now_favorite else "☆"
@@ -91,9 +92,11 @@ def _render_stock_details_panel(
         metrics=metrics,
         company_name=company_name,
         ticker=ticker,
+        universe=universe,
         sector=sector,
         industry=industry,
         show_liquidity_context=show_liquidity_context,
+        show_full_details=show_full_details,
         favorite_label=favorite_label,
         favorite_button_key=f"favorite-{universe}-{ticker}",
         on_toggle=_toggle_favorite,
