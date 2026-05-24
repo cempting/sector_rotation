@@ -1,97 +1,137 @@
 # Sector Rotation Screener
 
-A Streamlit dashboard for visualizing market sector/industry rotations and screening equities. Supports multiple stock universes (S&P 100, S&P 500, Russell 2000, STOXX Europe 600, Hang Seng) with drill-down from sector → industry → individual stocks.
+Streamlit app for market rotation exploration across stock universes, with feature-based navigation for:
 
-## Setup
+- Sector/Industry/Stock drill-down browsing
+- Search across all universes
+- Favorites management (export/import JSON)
+- Trend and volume suggestions
 
-1. Create and activate a Python virtual environment:
+## Quick start
 
-        python -m venv env
-        source env/bin/activate    # Linux/Mac
-        # env\Scripts\activate     # Windows
+1. Create and activate a virtual environment:
+
+```bash
+python -m venv env
+source env/bin/activate
+```
 
 2. Install dependencies:
 
-        pip install -r requirements.txt
+```bash
+pip install -r requirements.txt
+```
 
-## Run the dashboard
+3. Run the app:
 
-    streamlit run main.py
+```bash
+streamlit run main.py
+```
 
-## Run tests
+4. Run tests:
 
-    pytest
+```bash
+pytest
+```
 
-## Project structure
+## How to use the app
 
-    sector_rotation/
-    ├── main.py                  # Streamlit entry point
-    ├── src/
-    │   ├── dashboard.py         # Main app layout and sidebar
-    │   ├── renderers.py         # Sector/industry/stock card rendering
-    │   ├── data.py              # Data fetchers (yfinance, financedatabase)
-    │   ├── cache.py             # Ticker cache (load/save/background update)
-    │   ├── universe.py          # Universe CSV loader (sectors, industries, tickers)
-    │   ├── charts.py            # Chart rendering helpers
-    │   └── constants.py         # Sector ETF map, layout constants
-    ├── ticker_universes/        # Stock universe CSV files
-    │   ├── fetch_universes.py   # Script to regenerate CSVs from online sources
-    │   ├── sp100.csv
-    │   ├── sp500.csv
-    │   ├── russell2000.csv
-    │   ├── stoxx600.csv
-    │   └── hangseng.csv
-    ├── data_cache/              # Local ticker data cache
-    └── tests/
+The app uses a sticky top navigation bar. Choose a feature first, then use feature-specific controls.
+
+### Sector / Industry / Stocks
+
+- Choose a universe.
+- Drill down by Sector, then Industry, then optional Stock.
+- Use the refresh button to clear cached data for the current scope and reload market data.
+
+### Search
+
+- Enter ticker, company name, sector, or industry in the search box.
+- Results are grouped by universe.
+- Refresh reloads the current search result tickers.
+
+### Favorites
+
+- View favorited tickers grouped by universe.
+- Export favorites as JSON.
+- Import JSON and either merge or replace existing favorites.
+
+### Suggestions
+
+- Select a universe.
+- Discover industries and stocks with trend + volume filters.
+- Refresh clears cached suggestion computations and reloads relevant tickers.
+
+### Data retry behavior
+
+- If a ticker repeatedly returns no data (for example delisted or unavailable symbols), the app marks it as temporarily unavailable.
+- Temporarily unavailable tickers are skipped for a cooldown window before trying again.
+- This reduces repeated failed requests and keeps the app responsive.
 
 ## Stock universes
 
-The sidebar provides a dropdown to select a stock universe. Each universe is a CSV in `ticker_universes/` with columns: `Ticker, Name, Sector, Industry`. Selecting a universe drives the Sector and Industry dropdowns.
+Universe files live in `ticker_universes/` and are auto-discovered.
 
-**Built-in universes:**
+- Required columns: `Ticker`, `Name`, `Sector`, `Industry`
+- Custom CSVs with these columns are picked up automatically
 
-| Universe          | Source                              | Stocks |
-|-------------------|-------------------------------------|--------|
-| S&P 100           | Wikipedia                           | ~101   |
-| S&P 500           | Wikipedia                           | ~503   |
-| Russell 2000      | iShares IWM + financedatabase       | ~1,933 |
-| NASDAQ            | financedatabase (NMS/NGM/NCM)       | ~7,875 |
-| NYSE              | financedatabase (NYQ)               | ~3,543 |
-| STOXX Europe 600  | Wikipedia                           | ~534   |
-| Hang Seng         | Wikipedia                           | ~85    |
+Refresh built-in universe CSVs:
 
-To refresh the CSVs from online sources:
+```bash
+cd ticker_universes
+python fetch_universes.py
+```
 
-    cd ticker_universes && python fetch_universes.py
+## Architecture summary
 
-**Custom universes:** Drop any CSV with `Ticker,Name,Sector,Industry` columns into `ticker_universes/` and it will appear in the sidebar dropdown automatically.
+- Entry point: `main.py`
+- App shell: `src/dashboard.py`
+- Feature routing: `src/features/__init__.py` (`FeatureRegistry`)
+- Feature contract: `src/core/ui/interface.py` (`FeatureView`)
+- Data layer: `src/core/data/`
+- Analytics layer: `src/core/analytics/`
 
-## Onboarding new markets (generic)
+Detailed design documentation is available in `docs/app-design.md`.
 
-The app now uses a market-aware configuration model in `src/constants.py`:
+## Project structure
 
-- `BUILTIN_UNIVERSE_FILES`: display name -> CSV filename
-- `UNIVERSE_MARKET`: universe name -> market key (for example `us`, `eu`, `asia`)
-- `MARKET_SECTOR_CONFIG`: market key -> sector proxy mapping and optional alias map
-- `resolve_sector_proxy_ticker(...)`: resolves each sector to the right ETF/index proxy for that market
+```text
+sector_rotation/
+|- main.py
+|- src/
+|  |- dashboard.py
+|  |- core/
+|  |  |- data/
+|  |  |- analytics/
+|  |  |- ui/
+|  |- features/
+|  |  |- sector_industry_stocks/
+|  |  |- search/
+|  |  |- favorites/
+|  |  |- suggestions/
+|  |  |- liquidity/
+|  |- charts.py
+|  |- constants.py
+|- ticker_universes/
+|- data_cache/
+|- tests/
+```
 
-To add a new market (for example Australia, South America, Africa):
+## Extending the app
 
-1. Add the universe CSV file under `ticker_universes/`.
-2. Register the universe name in `BUILTIN_UNIVERSE_FILES`.
-3. Add/assign a market key in `UNIVERSE_MARKET`.
-4. Add the market's sector proxy map in `MARKET_SECTOR_CONFIG`.
-5. Validate resolution coverage by checking all sectors in that universe resolve to a proxy.
+### Add a feature
 
-## Add a feature (plugin-style)
+1. Create `src/features/<feature_name>/`.
+2. Implement a class inheriting `FeatureView`.
+3. Register it in `src/features/__init__.py` via `FeatureRegistry.register_feature(...)`.
+4. Add route mapping in `src/dashboard.py`.
+5. Add/adjust tests in `tests/features/` and `tests/test_feature_routing.py`.
 
-Features are routed through `FeatureRegistry`, so adding a new feature is intentionally small:
+### Add a market/universe
 
-1. Create a package under `src/features/<your_feature>/`.
-2. Implement a `FeatureView` class with `get_route_name()` and `render(...)`.
-3. Export the class from `src/features/<your_feature>/__init__.py`.
-4. Register it in `src/features/__init__.py` inside `FeatureRegistry._ensure_initialized()` via `register_feature(YourViewClass)`.
-5. Route to it from `src/dashboard.py` using `FeatureRegistry.render_route("your_route", **kwargs)`.
-
-This keeps core usage simple: controllers only need route names and render kwargs, not feature construction details.
+1. Add CSV under `ticker_universes/`.
+2. Register it in `src/constants.py` (`BUILTIN_UNIVERSE_FILES`).
+3. Map the universe to a market key (`UNIVERSE_MARKET`).
+4. Add sector proxy mapping in `MARKET_SECTOR_CONFIG`.
+5. Validate with targeted tests and manual smoke-check in the UI.
  
