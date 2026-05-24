@@ -11,7 +11,7 @@ from .view_config import BASE_CHART_WIDTH
 DEDICATED_TOP_ROW_LAYOUT = [("chart", 1.2), ("details", 1.45)]
 DEDICATED_CONTEXT_ROW_LAYOUT = [("macro", 1.0), ("recent", 1.0)]
 DEDICATED_CHART_MIN_HEIGHT = 3.6
-DEDICATED_CHART_WIDTH = BASE_CHART_WIDTH * 1.35
+DEDICATED_CHART_WIDTH = BASE_CHART_WIDTH * 1.2
 
 
 def dedicated_chart_size(chart_height: float) -> tuple[float, float]:
@@ -39,12 +39,9 @@ def render_dedicated_stock_view(
             st.rerun()
     st.caption(f"Dedicated stock view · {focus_ticker}")
 
-    # Row 1: chart (left) | company header + hero stats (right)
-    top_cols = st.columns([1.1, 1.0])
-    with top_cols[0]:
-        render_slot("chart")
-    with top_cols[1]:
-        render_slot("details_header")
+    # Row 1-2: stack chart and details to avoid cramped side-by-side content on narrow screens.
+    render_slot("chart")
+    render_slot("details_header")
 
     # Row 2–N: full-width scorecard criteria grid
     render_slot("details_body")

@@ -33,6 +33,154 @@ def _latest_table_value(table: pd.DataFrame, row_name: str) -> float | None:
     return float(series.iloc[0])
 
 
+def _period_sort_key(label: str) -> int:
+    text = str(label)
+    if "-Q" in text:
+        year_text, quarter_text = text.split("-Q", 1)
+        try:
+            year = int(year_text)
+            quarter = int(quarter_text)
+            return year * 4 + max(1, min(4, quarter))
+        except (TypeError, ValueError):
+            return -1
+    try:
+        year = int(text)
+        return year * 4 + 4
+    except (TypeError, ValueError):
+        return -1
+
+
+def _statement_row_series(table: pd.DataFrame, row_name: str, period: str = "annual") -> pd.Series:
+    if not isinstance(table, pd.DataFrame) or table.empty or row_name not in table.index:
+        return pd.Series(dtype=float)
+
+    raw = pd.to_numeric(table.loc[row_name], errors="coerce").dropna()
+    if raw.empty:
+        return pd.Series(dtype=float)
+
+    labels: list[str] = []
+    values: list[float] = []
+    for col, value in raw.items():
+        dt = pd.to_datetime(col, errors="coerce")
+        if pd.isna(dt):
+            continue
+        if period == "quarterly":
+            quarter = (int(dt.month) - 1) // 3 + 1
+            labels.append(f"{int(dt.year)}-Q{quarter}")
+        else:
+            labels.append(str(int(dt.year)))
+        values.append(float(value))
+
+    if not labels:
+        return pd.Series(dtype=float)
+
+    series = pd.Series(values, index=labels, dtype=float)
+    # Keep one point per label and sort chronologically.
+    series = series.groupby(level=0).last()
+    ordered_labels = sorted(series.index, key=_period_sort_key)
+    series = series.loc[ordered_labels]
+    return series
+
+
+def _trim_history(points: dict[str, float], max_points: int) -> dict[str, float]:
+    if not points:
+        return {}
+    labels_sorted = sorted(points.keys(), key=_period_sort_key)[-max_points:]
+    return {label: float(points[label]) for label in labels_sorted}
+
+
+def _compute_attribute_history(
+    financials: pd.DataFrame,
+    balance_sheet: pd.DataFrame,
+    cashflow: pd.DataFrame,
+    period: str = "annual",
+) -> dict[str, dict[str, float]]:
+    revenue = _statement_row_series(financials, "Total Revenue", period=period)
+    gross_profit = _statement_row_series(financials, "Gross Profit", period=period)
+    operating_income = _statement_row_series(financials, "Operating Income", period=period)
+    ebit = _statement_row_series(financials, "EBIT", period=period)
+    net_income = _statement_row_series(financials, "Net Income", period=period)
+    total_assets = _statement_row_series(balance_sheet, "Total Assets", period=period)
+    current_liabilities = _statement_row_series(balance_sheet, "Current Liabilities", period=period)
+    free_cash_flow = _statement_row_series(cashflow, "Free Cash Flow", period=period)
+
+    quality_points: dict[str, float] = {}
+    quality_periods = sorted(
+        set(revenue.index)
+        | set(gross_profit.index)
+        | set(operating_income.index)
+        | set(ebit.index)
+        | set(total_assets.index)
+        | set(current_liabilities.index),
+        key=_period_sort_key,
+    )
+    for label in quality_periods:
+        rev = revenue.get(label)
+        gp = gross_profit.get(label)
+        op = operating_income.get(label)
+        eb = ebit.get(label)
+        assets = total_assets.get(label)
+        curr_liab = current_liabilities.get(label)
+
+        components: list[float] = []
+        if rev and rev > 0 and pd.notna(gp):
+            components.append(float(gp / rev * 100.0))
+        if rev and rev > 0 and pd.notna(op):
+            components.append(float(op / rev * 100.0))
+        if pd.notna(eb) and pd.notna(assets) and pd.notna(curr_liab):
+            cap_emp = float(assets - curr_liab)
+            if cap_emp != 0:
+                components.append(float(eb / cap_emp * 100.0))
+
+        if components:
+            quality_points[str(label)] = float(sum(components) / len(components))
+
+    growth_points: dict[str, float] = {}
+    rev_growth = revenue.pct_change() * 100.0
+    net_income_growth = net_income.pct_change() * 100.0
+    growth_periods = sorted(
+        set(rev_growth.dropna().index) | set(net_income_growth.dropna().index),
+        key=_period_sort_key,
+    )
+    for label in growth_periods:
+        components: list[float] = []
+        rev_g = rev_growth.get(label)
+        ni_g = net_income_growth.get(label)
+        if pd.notna(rev_g):
+            components.append(float(rev_g))
+        if pd.notna(ni_g):
+            components.append(float(ni_g))
+        if components:
+            growth_points[str(label)] = float(sum(components) / len(components))
+
+    cashflow_points: dict[str, float] = {}
+    fcf_growth = free_cash_flow.pct_change() * 100.0
+    cashflow_periods = sorted(
+        set(free_cash_flow.index) | set(revenue.index) | set(fcf_growth.dropna().index),
+        key=_period_sort_key,
+    )
+    for label in cashflow_periods:
+        rev = revenue.get(label)
+        fcf = free_cash_flow.get(label)
+        fcf_g = fcf_growth.get(label)
+        components: list[float] = []
+        if pd.notna(fcf) and pd.notna(rev) and rev and rev > 0:
+            components.append(float(fcf / rev * 100.0))
+        if pd.notna(fcf_g):
+            components.append(float(fcf_g))
+        if components:
+            cashflow_points[str(label)] = float(sum(components) / len(components))
+
+    max_points = 40 if period == "quarterly" else 10
+    suffix = "quarterly" if period == "quarterly" else "annual"
+
+    return {
+        f"quality_history_{suffix}_pct": _trim_history(quality_points, max_points=max_points),
+        f"growth_history_{suffix}_pct": _trim_history(growth_points, max_points=max_points),
+        f"cashflow_history_{suffix}_pct": _trim_history(cashflow_points, max_points=max_points),
+    }
+
+
 def compute_return_vol_rr(close: pd.Series, lookback: int = 30) -> dict[str, float]:
     """Compute annualized expected return, volatility, and simple risk/reward ratio."""
     if close is None or close.empty:
@@ -425,6 +573,9 @@ def compute_stock_metrics(df: pd.DataFrame, ticker: str, ticker_factory=yf.Ticke
             financials = tick.financials
             balance_sheet = tick.balance_sheet
             cashflow = tick.cashflow
+            quarterly_financials = tick.quarterly_financials
+            quarterly_balance_sheet = tick.quarterly_balance_sheet
+            quarterly_cashflow = tick.quarterly_cashflow
 
             total_revenue = _latest_table_value(financials, "Total Revenue")
             gross_profit = _latest_table_value(financials, "Gross Profit")
@@ -458,6 +609,16 @@ def compute_stock_metrics(df: pd.DataFrame, ticker: str, ticker_factory=yf.Ticke
                 "free_cash_flow": free_cash_flow,
                 "revenue_ttm": revenue_ttm,
             })
+            quarterly_history = _compute_attribute_history(
+                quarterly_financials,
+                quarterly_balance_sheet,
+                quarterly_cashflow,
+                period="quarterly",
+            )
+            if any(quarterly_history.values()):
+                metrics.update(quarterly_history)
+            else:
+                metrics.update(_compute_attribute_history(financials, balance_sheet, cashflow, period="annual"))
         except Exception:
             metrics.update({
                 "gross_margin": None,
@@ -465,6 +626,12 @@ def compute_stock_metrics(df: pd.DataFrame, ticker: str, ticker_factory=yf.Ticke
                 "roce": None,
                 "free_cash_flow": free_cash_flow,
                 "revenue_ttm": revenue_ttm,
+                "quality_history_quarterly_pct": {},
+                "growth_history_quarterly_pct": {},
+                "cashflow_history_quarterly_pct": {},
+                "quality_history_annual_pct": {},
+                "growth_history_annual_pct": {},
+                "cashflow_history_annual_pct": {},
             })
 
         fcf_margin = None

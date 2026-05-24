@@ -197,8 +197,62 @@ def _score_from_status(status: str) -> int:
     return 25
 
 
+def _field_explanation(label: str) -> str:
+    explanations = {
+        "Gross Margin": "Gross margin is gross profit divided by revenue. It shows how much of each sales dollar remains after direct production costs.",
+        "Operating Margin": "Operating margin is operating income divided by revenue. It measures profitability after operating costs, before interest and taxes.",
+        "ROCE": "Return on Capital Employed (ROCE) is EBIT divided by capital employed. It indicates how efficiently the business generates operating profit from invested capital.",
+        "P/E": "Price-to-Earnings (P/E) compares share price to trailing earnings per share. Higher values imply investors pay more for each unit of current earnings.",
+        "Forward P/E": "Forward P/E compares share price to expected next-year earnings per share. It reflects valuation based on forecast earnings.",
+        "P/B": "Price-to-Book (P/B) compares market value to book equity. It indicates how far the market prices the company above or below accounting net assets.",
+        "Sales YoY": "Year-over-year sales growth compares revenue to the same period a year ago. It is a core measure of top-line expansion.",
+        "EPS YoY": "Year-over-year EPS growth compares earnings per share to the same period last year. It reflects profit growth attributable to each share.",
+        "P/S": "Price-to-Sales (P/S) compares market value to revenue. It is often used for companies where earnings are volatile or currently low.",
+        "PEG": "PEG is P/E divided by earnings growth rate. Around 1 can indicate valuation is aligned with growth, while much higher can indicate expensive growth pricing.",
+        "FCF Margin": "Free-cash-flow margin is free cash flow divided by revenue. It shows how effectively revenue is converted into cash after operating and capital spending needs.",
+        "FCF Yield": "Free-cash-flow yield is free cash flow divided by market capitalization. It estimates cash return generated relative to the market value of the company.",
+        "EV/EBITDA": "EV/EBITDA compares enterprise value to EBITDA. It is a capital-structure-neutral valuation multiple often used for cross-company comparisons.",
+        "Price": "Latest traded stock price from recent market data.",
+        "20D Change": "Percent price change over the last 20 trading days.",
+        "Volatility": "Historical 20-day price volatility; higher values mean larger daily swings.",
+        "Regime": "Simple market state inferred from recent momentum (Risk-On vs Risk-Off).",
+        "Composite": "Combined score blending Quality, Growth, Cash Flow, and Risk lenses.",
+        "Quality": "Profitability and efficiency lens based on margins, returns, and valuation context.",
+        "Growth": "Business growth lens using revenue/earnings momentum and valuation support.",
+        "Cash Flow": "Cash generation lens combining free-cash-flow strength and valuation support.",
+        "Risk": "Risk lens based on volatility, beta, and risk/reward balance.",
+        "Risk/Reward": "Expected return divided by expected volatility over the selected lookback.",
+        "Beta": "Sensitivity versus the broad market. 1.0 is market-like risk.",
+        "Volatility 20D": "Recent 20-day annualized volatility estimate.",
+        "Fundamental %ile": "Aggregate percentile-like score from Quality, Growth, and Cash Flow lenses.",
+        "Risk-Adjusted %ile": "Blend of Risk and Quality to reflect durability of returns.",
+        "Liquidity Shift": "How recent trading flow compares with prior periods.",
+        "Flow Trend (3M)": "Dollar-volume trend over roughly the last 3 months.",
+        "Flow Trend (6M)": "Dollar-volume trend over roughly the last 6 months.",
+        "Weekly Acceleration": "Short-term acceleration/deceleration in weekly trading flow.",
+        "Flow Ratio": "Recent 20-day dollar volume relative to a 60-day baseline.",
+        "Macro Impact": "How macro factors currently relate to this stock's behavior.",
+        "Impact": "Overall macro interpretation of the stock's recent correlation profile.",
+        "Driver": "Macro factor with strongest recent relationship to returns.",
+        "Beta Profile": "Interpretation of whether behavior is pro-cyclical or defensive.",
+        "Market Regime (3M)": "Broad market/rates regime estimate over approximately 3 months.",
+        "Ratings & Relative Strength": "Analyst snapshot plus relative momentum versus industry peers.",
+        "Analyst Rating": "Latest consensus analyst recommendation summary.",
+        "Rating Detail": "Additional context behind the current analyst snapshot.",
+        "MRSI vs Industry": "Momentum/relative-strength signal versus industry average.",
+        "Recent Headlines": "Most recent available news headlines for this ticker.",
+        "News Feed": "Recent headline stream used for quick qualitative context.",
+    }
+    return explanations.get(label, f"Definition for '{label}' in this stock details context.")
+
+
+def _tooltip_attr(label: str, fallback: str | None = None) -> str:
+    tip = fallback or _field_explanation(label)
+    return html.escape(tip).replace("\n", "&#10;")
+
+
 def _render_colored_detail_card(label: str, value: str, status: str, help_text: str, eval_text: str) -> None:
-    safe_help = html.escape(help_text).replace("\n", "&#10;")
+    safe_help = _tooltip_attr(label, f"{_field_explanation(label)}\n\n{help_text}")
     safe_label = html.escape(label)
     safe_value = html.escape(value)
     safe_eval = html.escape(eval_text)
@@ -225,7 +279,7 @@ def _render_score_bar(label: str, score: float) -> None:
     color = _status_color(status)
     st.markdown(
         (
-            '<div class="sr-score-row">'
+            f'<div class="sr-score-row" title="{_tooltip_attr(label)}">'
             '<div class="sr-score-head">'
             f'<div class="sr-score-label">{html.escape(label)}</div>'
             f'<div class="sr-score-value">{clamped:.0f}</div>'
@@ -339,9 +393,22 @@ def _render_criteria_row(
     context: dict[str, object],
     extra_cards: list[tuple[str, str, str, str, str]] | None = None,
 ) -> None:
-    """Full-width row: score panel on the left, every metric card across the right."""
+    """Responsive criteria rows: score panel left, cards wrapped across rows."""
     extra = extra_cards or []
-    n_cards = len(metric_entries) + len(extra)
+    card_items: list[tuple[str, str, str, str, str]] = []
+    for label, raw, value in metric_entries:
+        card_items.append(
+            (
+                label,
+                value,
+                _metric_status(label, raw, context),
+                _metric_help_text(label, raw, context),
+                _evaluate_metric_range(label, raw, context),
+            )
+        )
+    card_items.extend(extra)
+
+    n_cards = len(card_items)
     if n_cards == 0:
         return
 
@@ -349,38 +416,37 @@ def _render_criteria_row(
     status = "good" if clamped >= 75 else "moderate" if clamped >= 45 else "weak"
     color = _status_color(status)
 
-    # Score panel occupies 1.2 units; each metric card 1.0 unit
-    widths = [1.2] + [1.0] * n_cards
-    cols = st.columns(widths)
+    # Keep rows compact so cards remain legible on laptop/mobile widths.
+    max_cards_per_row = 3
+    for row_start in range(0, n_cards, max_cards_per_row):
+        row_cards = card_items[row_start: row_start + max_cards_per_row]
+        widths = [1.2] + [1.0] * len(row_cards)
 
-    with cols[0]:
-        st.markdown(
-            (
-                '<div class="sr-criteria-score-panel">'
-                f'<div class="sr-criteria-score-label">{html.escape(category_label)}</div>'
-                f'<div class="sr-criteria-score-value" style="color:{color};">{clamped:.0f}</div>'
-                '<div class="sr-score-track">'
-                f'<div class="sr-score-fill" style="width:{clamped:.0f}%; background:{color};"></div>'
-                "</div>"
-                "</div>"
-            ),
-            unsafe_allow_html=True,
-        )
+        category_slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in category_label).strip("-") or "category"
+        row_key = f"sr-row-{status}-{category_slug}-{row_start}"
+        with st.container(key=row_key):
+            cols = st.columns(widths)
 
-    for idx, (label, raw, value) in enumerate(metric_entries):
-        with cols[idx + 1]:
-            _render_colored_detail_card(
-                label,
-                value,
-                _metric_status(label, raw, context),
-                _metric_help_text(label, raw, context),
-                _evaluate_metric_range(label, raw, context),
-            )
+            with cols[0]:
+                if row_start == 0:
+                    st.markdown(
+                        (
+                            f'<div class="sr-criteria-score-panel" title="{_tooltip_attr(category_label)}">'
+                            f'<div class="sr-criteria-score-label">{html.escape(category_label)}</div>'
+                            f'<div class="sr-criteria-score-value" style="color:{color};">{clamped:.0f}</div>'
+                            '<div class="sr-score-track">'
+                            f'<div class="sr-score-fill" style="width:{clamped:.0f}%; background:{color};"></div>'
+                            "</div>"
+                            "</div>"
+                        ),
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown('<div class="sr-criteria-spacer"></div>', unsafe_allow_html=True)
 
-    offset = len(metric_entries) + 1
-    for idx, (label, value, card_status, help_text, eval_text) in enumerate(extra):
-        with cols[offset + idx]:
-            _render_colored_detail_card(label, value, card_status, help_text, eval_text)
+            for idx, (label, value, card_status, help_text, eval_text) in enumerate(row_cards):
+                with cols[idx + 1]:
+                    _render_colored_detail_card(label, value, card_status, help_text, eval_text)
 
 
 def _render_compact_stock_panel(
@@ -415,42 +481,101 @@ def _render_compact_stock_panel(
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-def _render_trend_lenses_pane(
-    metrics: dict[str, object],
-    change_20d: float | None,
-    vol_20d: float | None,
-    beta: float | None,
-    rr: float | None,
-) -> None:
+def _render_trend_lenses_pane(metrics: dict[str, object]) -> None:
     _pane_start("Trend Lenses")
-    trend_rows: list[tuple[str, float]] = []
-    if change_20d is not None:
-        trend_rows.append(("Price 20D", change_20d))
-    liq_3m = _safe_float(metrics.get("liq_trend_3m_pct"))
-    liq_6m = _safe_float(metrics.get("liq_trend_6m_pct"))
-    liq_accel = _safe_float(metrics.get("liq_accel_weekly_pct"))
-    if liq_3m is not None:
-        trend_rows.append(("Liquidity 3M", liq_3m))
-    if liq_6m is not None:
-        trend_rows.append(("Liquidity 6M", liq_6m))
-    if liq_accel is not None:
-        trend_rows.append(("Liquidity Wk", liq_accel))
-    st.bar_chart(_lens_frame(trend_rows, "Price 20D"))
 
-    risk_rows: list[tuple[str, float]] = []
-    if vol_20d is not None:
-        risk_rows.append(("Vol 20D", vol_20d))
-    exp_vol = _safe_float(metrics.get("exp_vol_ann_pct"))
-    exp_ret = _safe_float(metrics.get("exp_return_ann_pct"))
-    if exp_vol is not None:
-        risk_rows.append(("Exp Vol", exp_vol))
-    if exp_ret is not None:
-        risk_rows.append(("Exp Ret", exp_ret))
-    if beta is not None:
-        risk_rows.append(("Beta x10", beta * 10.0))
-    if rr is not None:
-        risk_rows.append(("R/R x10", rr * 10.0))
-    st.bar_chart(_lens_frame(risk_rows, "Vol 20D"))
+    def _as_history_map(key: str) -> dict[str, float]:
+        raw = metrics.get(key)
+        if not isinstance(raw, dict):
+            return {}
+        out: dict[str, float] = {}
+        for year, value in raw.items():
+            num = _safe_float(value)
+            if num is None:
+                continue
+            out[str(year)] = float(num)
+        return out
+
+    quality_hist = _as_history_map("quality_history_quarterly_pct")
+    growth_hist = _as_history_map("growth_history_quarterly_pct")
+    cashflow_hist = _as_history_map("cashflow_history_quarterly_pct")
+    quarterly_mode = bool(quality_hist or growth_hist or cashflow_hist)
+
+    if not quarterly_mode:
+        quality_hist = _as_history_map("quality_history_annual_pct")
+        growth_hist = _as_history_map("growth_history_annual_pct")
+        cashflow_hist = _as_history_map("cashflow_history_annual_pct")
+
+    if not quality_hist and not growth_hist and not cashflow_hist:
+        st.caption("No multi-year fundamentals available yet for Quality/Growth/Cash Flow trend lenses.")
+        _pane_end()
+        return
+
+    period_rows: dict[str, dict[str, float]] = {}
+
+    def _period_sort_key(label: str) -> int:
+        text = str(label)
+        if "-Q" in text:
+            year_text, quarter_text = text.split("-Q", 1)
+            try:
+                year = int(year_text)
+                quarter = int(quarter_text)
+                return year * 4 + max(1, min(4, quarter))
+            except (TypeError, ValueError):
+                return -1
+        try:
+            year = int(text)
+            return year * 4 + 4
+        except (TypeError, ValueError):
+            return -1
+
+    def _add_series(series_name: str, values: dict[str, float]) -> None:
+        for period_label, metric_val in values.items():
+            period_rows.setdefault(str(period_label), {})[series_name] = metric_val
+
+    _add_series("Quality", quality_hist)
+    _add_series("Growth", growth_hist)
+    _add_series("Cash Flow", cashflow_hist)
+
+    if not period_rows:
+        st.caption("No valid period history points were found for trend lenses.")
+        _pane_end()
+        return
+
+    ordered_periods = sorted(period_rows.keys(), key=_period_sort_key)
+    trend_df = pd.DataFrame([period_rows[p] for p in ordered_periods], index=ordered_periods)
+    max_points = 40 if quarterly_mode else 10
+    if len(trend_df) > max_points:
+        trend_df = trend_df.tail(max_points)
+
+    if quarterly_mode:
+        st.caption("Quarterly attribute history (up to 10Y as available): Quality, Growth, Cash Flow")
+    else:
+        st.caption("Annual attribute history (5-10Y as available): Quality, Growth, Cash Flow")
+    st.line_chart(trend_df)
+
+    summary_cols = st.columns(3)
+
+    def _summary_text(col_name: str) -> str:
+        if col_name not in trend_df.columns:
+            return "N/A"
+        series = trend_df[col_name].dropna()
+        if series.empty:
+            return "N/A"
+        latest = float(series.iloc[-1])
+        lookback = 20 if quarterly_mode else 5
+        if len(series) >= lookback:
+            delta = latest - float(series.iloc[-lookback])
+            return f"Latest {latest:+.1f} | 5Y Δ {delta:+.1f}"
+        return f"Latest {latest:+.1f}"
+
+    with summary_cols[0]:
+        st.caption(f"Quality: {_summary_text('Quality')}")
+    with summary_cols[1]:
+        st.caption(f"Growth: {_summary_text('Growth')}")
+    with summary_cols[2]:
+        st.caption(f"Cash Flow: {_summary_text('Cash Flow')}")
+
     _pane_end()
 
 
@@ -484,13 +609,13 @@ def _render_workbench_styles(panel_min_height: str) -> None:
             background: rgba(255,255,255,0.015);
         }
         .sr-hero-label {
-            font-size: 0.58rem;
+            font-size: clamp(0.52rem, 0.58vw, 0.58rem);
             line-height: 1.0;
             opacity: 0.72;
             margin-bottom: 0.06rem;
         }
         .sr-hero-value {
-            font-size: 0.8rem;
+            font-size: clamp(0.72rem, 0.9vw, 0.8rem);
             line-height: 1.08;
             font-weight: 700;
         }
@@ -510,26 +635,26 @@ def _render_workbench_styles(panel_min_height: str) -> None:
             font-weight: 700;
         }
         .sr-details-card {
-            border: 1px solid rgba(128, 128, 128, 0.25);
+            border: 1px solid rgba(128, 128, 128, 0.15);
             border-radius: 0.45rem;
             padding: 0.2rem 0.32rem;
             min-height: 2.05rem;
             margin-bottom: 0.24rem;
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.01);
         }
         .sr-details-label {
-            font-size: 0.66rem;
+            font-size: clamp(0.58rem, 0.75vw, 0.66rem);
             line-height: 1.05;
             opacity: 0.78;
             margin-bottom: 0.08rem;
         }
         .sr-details-value {
-            font-size: 0.98rem;
+            font-size: clamp(0.78rem, 1.15vw, 0.98rem);
             line-height: 1.05;
             font-weight: 700;
         }
         .sr-details-explain {
-            font-size: 0.58rem;
+            font-size: clamp(0.52rem, 0.62vw, 0.58rem);
             line-height: 1.12;
             opacity: 0.72;
             margin-top: 0.07rem;
@@ -595,6 +720,32 @@ def _render_workbench_styles(panel_min_height: str) -> None:
             text-align: center;
             min-height: 4.5rem;
         }
+        .sr-criteria-spacer {
+            min-height: 4.5rem;
+            border: 1px solid rgba(128, 128, 128, 0.25);
+            border-radius: 0.5rem;
+        }
+        div[class*="st-key-sr-row-good-"] {
+            border: 1px solid rgba(78, 203, 113, 0.44);
+            border-radius: 0.6rem;
+            padding: 0.22rem 0.26rem;
+            margin-bottom: 0.3rem;
+            background: linear-gradient(180deg, rgba(78, 203, 113, 0.14), rgba(78, 203, 113, 0.05));
+        }
+        div[class*="st-key-sr-row-moderate-"] {
+            border: 1px solid rgba(242, 201, 76, 0.42);
+            border-radius: 0.6rem;
+            padding: 0.22rem 0.26rem;
+            margin-bottom: 0.3rem;
+            background: linear-gradient(180deg, rgba(242, 201, 76, 0.16), rgba(242, 201, 76, 0.06));
+        }
+        div[class*="st-key-sr-row-weak-"] {
+            border: 1px solid rgba(255, 107, 107, 0.42);
+            border-radius: 0.6rem;
+            padding: 0.22rem 0.26rem;
+            margin-bottom: 0.3rem;
+            background: linear-gradient(180deg, rgba(255, 107, 107, 0.15), rgba(255, 107, 107, 0.05));
+        }
         .sr-criteria-score-label {
             font-size: 0.62rem;
             text-transform: uppercase;
@@ -604,7 +755,7 @@ def _render_workbench_styles(panel_min_height: str) -> None:
             margin-bottom: 0.18rem;
         }
         .sr-criteria-score-value {
-            font-size: 1.6rem;
+            font-size: clamp(1rem, 2.2vw, 1.6rem);
             font-weight: 700;
             line-height: 1.0;
             margin-bottom: 0.18rem;
@@ -618,6 +769,37 @@ def _render_workbench_styles(panel_min_height: str) -> None:
             }
             .sr-criteria-score-value {
                 font-size: 1.2rem;
+            }
+        }
+        @media (max-width: 900px) {
+            .sr-workbench {
+                padding: 0.34rem 0.38rem;
+            }
+            .sr-pane {
+                padding: 0.24rem 0.28rem;
+            }
+            .sr-details-card {
+                min-height: 1.9rem;
+            }
+            .sr-criteria-score-panel {
+                min-height: 3.8rem;
+            }
+        }
+        @media (max-width: 640px) {
+            .sr-hero-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .sr-criteria-score-label {
+                font-size: 0.56rem;
+            }
+            .sr-criteria-score-value {
+                font-size: 1rem;
+            }
+            .sr-details-value {
+                font-size: 0.78rem;
+            }
+            .sr-details-explain {
+                font-size: 0.5rem;
             }
         }
         </style>
@@ -687,7 +869,7 @@ def render_context_html_card(title: str, rows: list[tuple[str, str]], subtitle: 
 
     rows_html = "".join(
         (
-            '<div class="stock-context-row">'
+            f'<div class="stock-context-row" title="{_tooltip_attr(label)}">'
             f'<div class="stock-context-label">{html.escape(label)}</div>'
             f'<div class="stock-context-value">{html.escape(value)}</div>'
             "</div>"
@@ -784,7 +966,7 @@ def render_structured_context_card(
     for section_title, section_rows in sections:
         rows_html = "".join(
             (
-                '<div class="stock-context-row">'
+                f'<div class="stock-context-row" title="{_tooltip_attr(label)}">'
                 f'<div class="stock-context-label">{html.escape(label)}</div>'
                 f'<div class="stock-context-value">{html.escape(value)}</div>'
                 "</div>"
@@ -809,7 +991,7 @@ def render_structured_context_card(
     if sources_rows:
         sources_html = "".join(
             (
-                '<div class="stock-context-row">'
+                f'<div class="stock-context-row" title="{_tooltip_attr(label, 'Reference source used to derive this insight.')}">'
                 f'<div class="stock-context-label">{html.escape(label)}</div>'
                 f'<div class="stock-context-value">{html.escape(value)}</div>'
                 "</div>"
@@ -1036,19 +1218,19 @@ def render_stock_details_panel(
             (
                 '<div class="sr-hero">'
                 '<div class="sr-hero-grid">'
-                '<div class="sr-hero-item">'
+                f'<div class="sr-hero-item" title="{_tooltip_attr("Price")}">'
                 '<div class="sr-hero-label">Price</div>'
                 f'<div class="sr-hero-value">{price_txt}</div>'
                 "</div>"
-                '<div class="sr-hero-item">'
+                f'<div class="sr-hero-item" title="{_tooltip_attr("20D Change")}">'
                 '<div class="sr-hero-label">20D Change</div>'
                 f'<div class="sr-hero-value" style="color:{_status_color("good" if (change_20d or 0) >= 0 else "weak")};">{change_txt}</div>'
                 "</div>"
-                '<div class="sr-hero-item">'
+                f'<div class="sr-hero-item" title="{_tooltip_attr("Volatility")}">'
                 '<div class="sr-hero-label">Volatility</div>'
                 f'<div class="sr-hero-value">{vol_txt}</div>'
                 "</div>"
-                '<div class="sr-hero-item">'
+                f'<div class="sr-hero-item" title="{_tooltip_attr("Regime")}">'
                 '<div class="sr-hero-label">Regime</div>'
                 f'<div class="sr-hero-value" style="color:{_status_color(trend_status)};">{regime_label}</div>'
                 "</div>"
@@ -1133,6 +1315,6 @@ def render_stock_details_panel(
         ],
     )
 
-    _render_trend_lenses_pane(metrics, change_20d, vol_20d, beta, rr)
+    _render_trend_lenses_pane(metrics)
 
     st.markdown('</div>', unsafe_allow_html=True)

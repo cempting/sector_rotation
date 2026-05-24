@@ -17,6 +17,13 @@ from .constants import (
 )
 
 
+def _render_pyplot_fit(fig: plt.Figure) -> None:
+    try:
+        st.pyplot(fig, use_container_width=True)
+    except TypeError:
+        st.pyplot(fig)
+
+
 def get_trend_colors(ma_series: pd.Series, lookback: int = TREND_LOOKBACK_DAYS) -> tuple[str, str]:
     if isinstance(ma_series, pd.DataFrame):
         if ma_series.empty:
@@ -157,7 +164,7 @@ def render_chart(close: pd.Series, volume: pd.Series, ma_series: pd.Series,
     ax1.legend(fontsize=fontsize - 1, loc="upper left", facecolor="#333333", labelcolor="white")
 
     plt.tight_layout(pad=0.5)
-    st.pyplot(fig)
+    _render_pyplot_fit(fig)
     plt.close(fig)
 
 
@@ -187,7 +194,7 @@ def render_stock_chart(df: pd.DataFrame, ticker: str, figsize: tuple[float, floa
     ax2 = ax1.twinx()
     render_volume_bars(ax2, volume, bar_color, fontsize=DEFAULT_FONTSIZE, close=close, vol_ma=vol_ma20)
 
-    fontsize = DEFAULT_FONTSIZE
+    fontsize = DEFAULT_FONTSIZE if figsize[0] >= FIGSIZE_FONTSIZE_THRESHOLD else SMALL_FONTSIZE
     ax1.plot(close.index, close.values, color="#ffffff", linewidth=LINE_WIDTH, label="Price")
     ax1.plot(ma50.index, ma50.values, color="#ffdd44", linewidth=LINE_WIDTH, label="50 MA")
     ax1.plot(ma150.index, ma150.values, color="#00aaff", linewidth=LINE_WIDTH, label="150 MA")
@@ -196,5 +203,5 @@ def render_stock_chart(df: pd.DataFrame, ticker: str, figsize: tuple[float, floa
     ax1.legend(fontsize=fontsize - 1, loc="upper left", facecolor="#333333", labelcolor="white")
 
     plt.tight_layout(pad=0.5)
-    st.pyplot(fig)
+    _render_pyplot_fit(fig)
     plt.close(fig)
