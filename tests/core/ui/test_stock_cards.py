@@ -69,8 +69,11 @@ def test_render_stock_cards_focus_mode_uses_full_detail_layout(monkeypatch):
     assert len(chart_calls) == 1
     assert chart_calls[0][0] == dedicated_stock_view.DEDICATED_CHART_WIDTH
     assert chart_calls[0][1] == dedicated_stock_view.DEDICATED_CHART_MIN_HEIGHT
-    assert len(detail_calls) == 1
-    assert detail_calls[0]["show_full_details"] is True
+    # dedicated view calls details panel twice: once for "header", once for "body"
+    assert len(detail_calls) == 2
+    sections = {c["detail_section"] for c in detail_calls}
+    assert sections == {"header", "body"}
+    assert all(c["show_full_details"] is True for c in detail_calls)
     assert len(macro_calls) == 1
     assert len(recent_calls) == 1
     assert "details_opening_ticker" not in session_state

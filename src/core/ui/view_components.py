@@ -332,6 +332,57 @@ def _lens_frame(rows: list[tuple[str, float]], fallback_label: str) -> pd.DataFr
     return pd.DataFrame(lens_rows, columns=["lens", "value"]).set_index("lens")
 
 
+def _render_criteria_row(
+    category_label: str,
+    score: float,
+    metric_entries: list[tuple[str, object, str]],
+    context: dict[str, object],
+    extra_cards: list[tuple[str, str, str, str, str]] | None = None,
+) -> None:
+    """Full-width row: score panel on the left, every metric card across the right."""
+    extra = extra_cards or []
+    n_cards = len(metric_entries) + len(extra)
+    if n_cards == 0:
+        return
+
+    clamped = max(0.0, min(100.0, float(score)))
+    status = "good" if clamped >= 75 else "moderate" if clamped >= 45 else "weak"
+    color = _status_color(status)
+
+    # Score panel occupies 1.2 units; each metric card 1.0 unit
+    widths = [1.2] + [1.0] * n_cards
+    cols = st.columns(widths)
+
+    with cols[0]:
+        st.markdown(
+            (
+                '<div class="sr-criteria-score-panel">'
+                f'<div class="sr-criteria-score-label">{html.escape(category_label)}</div>'
+                f'<div class="sr-criteria-score-value" style="color:{color};">{clamped:.0f}</div>'
+                '<div class="sr-score-track">'
+                f'<div class="sr-score-fill" style="width:{clamped:.0f}%; background:{color};"></div>'
+                "</div>"
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+
+    for idx, (label, raw, value) in enumerate(metric_entries):
+        with cols[idx + 1]:
+            _render_colored_detail_card(
+                label,
+                value,
+                _metric_status(label, raw, context),
+                _metric_help_text(label, raw, context),
+                _evaluate_metric_range(label, raw, context),
+            )
+
+    offset = len(metric_entries) + 1
+    for idx, (label, value, card_status, help_text, eval_text) in enumerate(extra):
+        with cols[offset + idx]:
+            _render_colored_detail_card(label, value, card_status, help_text, eval_text)
+
+
 def _render_compact_stock_panel(
     universe: str,
     ticker: str,
@@ -526,12 +577,47 @@ def _render_workbench_styles(panel_min_height: str) -> None:
             background: linear-gradient(180deg, rgba(78,203,113,0.22), rgba(78,203,113,0.1)) !important;
             font-weight: 650 !important;
         }
+        .sr-criteria-row {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            margin-bottom: 0.28rem;
+        }
+        .sr-criteria-score-panel {
+            border: 1px solid rgba(128, 128, 128, 0.25);
+            border-radius: 0.5rem;
+            padding: 0.42rem 0.5rem;
+            background: rgba(255,255,255,0.02);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 4.5rem;
+        }
+        .sr-criteria-score-label {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            opacity: 0.75;
+            font-weight: 700;
+            margin-bottom: 0.18rem;
+        }
+        .sr-criteria-score-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1.0;
+            margin-bottom: 0.18rem;
+        }
         @media (max-width: 1200px) {
             .sr-hero-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             .sr-details-value {
                 font-size: 0.9rem;
+            }
+            .sr-criteria-score-value {
+                font-size: 1.2rem;
             }
         }
         </style>
@@ -834,8 +920,15 @@ def render_stock_details_panel(
     favorite_button_key: str,
     on_toggle: Callable[..., Any],
     on_toggle_args: tuple[Any, ...],
+    detail_section: str = "full",
 ) -> None:
-    """Render a stock intelligence workbench with grouped fundamentals and score charts."""
+    """Render a stock intelligence workbench.
+
+    detail_section:
+      "full"   – header + hero stats + criteria grid (default, used in card grid)
+      "header" – company name + hero stats only (dedicated view top-row right column)
+      "body"   – criteria grid + trend lenses only (dedicated view full-width section)
+    """
 
     ticker_label = ticker.upper()
     price = _safe_float(metrics.get("latest"))
@@ -913,115 +1006,133 @@ def render_stock_details_panel(
     vol_txt = f"{vol_20d:.1f}%" if vol_20d is not None else "N/A"
     rr_txt = f"{rr:+.2f}" if rr is not None else "N/A"
 
-    _render_stock_header(
-        company_name,
-        ticker,
-        sector,
-        industry,
-        favorite_label,
-        favorite_button_key,
-        on_toggle,
-        on_toggle_args,
-        show_full_details,
-    )
+    # ── header section: company name + hero stats ─────────────────────────────
+    if detail_section in ("full", "header"):
+        _render_stock_header(
+            company_name,
+            ticker,
+            sector,
+            industry,
+            favorite_label,
+            favorite_button_key,
+            on_toggle,
+            on_toggle_args,
+            show_full_details,
+        )
+
+        if not show_full_details:
+            _render_compact_stock_panel(
+                universe,
+                ticker,
+                composite_score,
+                quality_score,
+                growth_score,
+                cashflow_score,
+                risk_score,
+            )
+            return
+
+        st.markdown(
+            (
+                '<div class="sr-hero">'
+                '<div class="sr-hero-grid">'
+                '<div class="sr-hero-item">'
+                '<div class="sr-hero-label">Price</div>'
+                f'<div class="sr-hero-value">{price_txt}</div>'
+                "</div>"
+                '<div class="sr-hero-item">'
+                '<div class="sr-hero-label">20D Change</div>'
+                f'<div class="sr-hero-value" style="color:{_status_color("good" if (change_20d or 0) >= 0 else "weak")};">{change_txt}</div>'
+                "</div>"
+                '<div class="sr-hero-item">'
+                '<div class="sr-hero-label">Volatility</div>'
+                f'<div class="sr-hero-value">{vol_txt}</div>'
+                "</div>"
+                '<div class="sr-hero-item">'
+                '<div class="sr-hero-label">Regime</div>'
+                f'<div class="sr-hero-value" style="color:{_status_color(trend_status)};">{regime_label}</div>'
+                "</div>"
+                "</div>"
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+
+        if detail_section == "header":
+            return
 
     if not show_full_details:
-        _render_compact_stock_panel(
-            universe,
-            ticker,
-            composite_score,
-            quality_score,
-            growth_score,
-            cashflow_score,
-            risk_score,
-        )
-        return
+        return  # "body" mode with compact panel — nothing extra to render
 
+    # ── body section: full-width criteria grid + trend lenses ─────────────────
     st.markdown('<div class="sr-workbench">', unsafe_allow_html=True)
 
-    st.markdown(
-        (
-            '<div class="sr-hero">'
-            '<div class="sr-hero-grid">'
-            '<div class="sr-hero-item">'
-            '<div class="sr-hero-label">Price</div>'
-            f'<div class="sr-hero-value">{price_txt}</div>'
-            "</div>"
-            '<div class="sr-hero-item">'
-            '<div class="sr-hero-label">20D Change</div>'
-            f'<div class="sr-hero-value" style="color:{_status_color("good" if (change_20d or 0) >= 0 else "weak")};">{change_txt}</div>'
-            "</div>"
-            '<div class="sr-hero-item">'
-            '<div class="sr-hero-label">Volatility</div>'
-            f'<div class="sr-hero-value">{vol_txt}</div>'
-            "</div>"
-            '<div class="sr-hero-item">'
-            '<div class="sr-hero-label">Regime</div>'
-            f'<div class="sr-hero-value" style="color:{_status_color(trend_status)};">{regime_label}</div>'
-            "</div>"
-            "</div>"
-            "</div>"
-        ),
-        unsafe_allow_html=True,
+    # ── Full-width criteria grid: one row per scorecard category ───────────────
+    _render_criteria_row("Quality", quality_score, quality_metrics, context)
+    _render_criteria_row("Growth", growth_score, growth_metrics, context)
+    _render_criteria_row("Cash Flow", cashflow_score, cashflow_metrics, context)
+
+    fund_pct = (quality_score + growth_score + cashflow_score) / 3.0
+    ra_pct = (risk_score + quality_score) / 2.0
+    _render_criteria_row(
+        "Risk",
+        risk_score,
+        [],
+        context,
+        extra_cards=[
+            (
+                "Risk/Reward",
+                rr_txt,
+                "good" if (rr is not None and rr >= 0.7) else "moderate" if (rr is not None and rr >= 0.25) else "weak",
+                "Expected return divided by expected volatility over the recent lookback.",
+                "Higher is better; below 0.25 indicates weak risk-adjusted trend.",
+            ),
+            (
+                "Beta",
+                f"{beta:.2f}" if beta is not None else "N/A",
+                "good" if (beta is not None and beta <= 1.1) else "moderate" if (beta is not None and beta <= 1.4) else "weak",
+                "Beta measures sensitivity to broad market moves.",
+                "Near 1.0 is balanced; much above 1.4 implies higher market sensitivity.",
+            ),
+            (
+                "Volatility 20D",
+                vol_txt,
+                "good" if (vol_20d is not None and vol_20d <= 2.0) else "moderate" if (vol_20d is not None and vol_20d <= 3.5) else "weak",
+                "20-day historical volatility (annualised).",
+                "Low (<2%) = stable; high (>3.5%) = elevated risk.",
+            ),
+        ],
+    )
+    _render_criteria_row(
+        "Composite",
+        composite_score,
+        [],
+        context,
+        extra_cards=[
+            (
+                "20D Change",
+                change_txt,
+                trend_status,
+                "20-day price change as a percentage.",
+                "Positive indicates recent upward momentum.",
+            ),
+            (
+                "Fundamental %ile",
+                f"{fund_pct:.0f}",
+                "good" if fund_pct >= 75 else "moderate" if fund_pct >= 45 else "weak",
+                "Average of Quality, Growth and Cash Flow scores.",
+                "Relative fundamental strength across all scored metrics.",
+            ),
+            (
+                "Risk-Adjusted %ile",
+                f"{ra_pct:.0f}",
+                "good" if ra_pct >= 75 else "moderate" if ra_pct >= 45 else "weak",
+                "Blend of Risk and Quality scores.",
+                "High values indicate strong fundamentals with manageable risk.",
+            ),
+        ],
     )
 
-    left_col, right_col = st.columns([1.3, 1.0])
-    with left_col:
-        _pane_start("Quality")
-        ql, qr = st.columns(2)
-        with ql:
-            _render_metric_cards(quality_metrics[:3], context)
-        with qr:
-            _render_metric_cards(quality_metrics[3:], context)
-        _pane_end()
-
-        _pane_start("Growth")
-        _render_metric_cards(growth_metrics, context)
-        _pane_end()
-
-        _pane_start("Cash Flow")
-        _render_metric_cards(cashflow_metrics, context)
-        _pane_end()
-
-    with right_col:
-        _pane_start("Scoreboard")
-        _render_score_bars(
-            [
-                ("Quality", quality_score),
-                ("Growth", growth_score),
-                ("Cash Flow", cashflow_score),
-                ("Risk", risk_score),
-                ("Composite", composite_score),
-            ]
-        )
-        _pane_end()
-
-        _pane_start("Trend Snapshot")
-        _render_colored_detail_card(
-            "Risk/Reward",
-            rr_txt,
-            "good" if (rr is not None and rr >= 0.7) else "moderate" if (rr is not None and rr >= 0.25) else "weak",
-            "Expected return divided by expected volatility over the recent lookback.",
-            "Higher is better; below 0.25 indicates weak risk-adjusted trend.",
-        )
-        _render_colored_detail_card(
-            "Beta",
-            f"{beta:.2f}" if beta is not None else "N/A",
-            "good" if (beta is not None and beta <= 1.1) else "moderate" if (beta is not None and beta <= 1.4) else "weak",
-            "Beta measures sensitivity to broad market moves.",
-            "Near 1.0 is balanced; much above 1.4 implies higher market sensitivity.",
-        )
-        _pane_end()
-
-        _render_trend_lenses_pane(metrics, change_20d, vol_20d, beta, rr)
-
-        _pane_start("Relative Standing")
-        _render_score_bars(
-            [
-                ("Fundamental Percentile", (quality_score + growth_score + cashflow_score) / 3.0),
-                ("Risk-Adjusted Percentile", (risk_score + quality_score) / 2.0),
-            ]
-        )
-        _pane_end()
+    _render_trend_lenses_pane(metrics, change_20d, vol_20d, beta, rr)
 
     st.markdown('</div>', unsafe_allow_html=True)

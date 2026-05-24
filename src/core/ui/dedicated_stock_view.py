@@ -39,13 +39,20 @@ def render_dedicated_stock_view(
             st.rerun()
     st.caption(f"Dedicated stock view · {focus_ticker}")
 
-    top_columns = st.columns([width for _, width in DEDICATED_TOP_ROW_LAYOUT])
-    for (slot, _), slot_col in zip(DEDICATED_TOP_ROW_LAYOUT, top_columns):
-        with slot_col:
-            render_slot(slot)
+    # Row 1: chart (left) | company header + hero stats (right)
+    top_cols = st.columns([1.1, 1.0])
+    with top_cols[0]:
+        render_slot("chart")
+    with top_cols[1]:
+        render_slot("details_header")
 
+    # Row 2–N: full-width scorecard criteria grid
+    render_slot("details_body")
+
+    # Row N+1: liquidity context + recent information
     if show_liquidity_context:
-        context_columns = st.columns([width for _, width in DEDICATED_CONTEXT_ROW_LAYOUT])
-        for (slot, _), slot_col in zip(DEDICATED_CONTEXT_ROW_LAYOUT, context_columns):
-            with slot_col:
-                render_slot(slot)
+        ctx_cols = st.columns([1.0, 1.0])
+        with ctx_cols[0]:
+            render_slot("macro")
+        with ctx_cols[1]:
+            render_slot("recent")

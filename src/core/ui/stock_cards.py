@@ -112,6 +112,30 @@ def render_stock_cards(
                             show_liquidity_context=show_liquidity_context,
                             show_full_details=focus_mode,
                         )
+                    elif slot == "details_header":
+                        render_stock_details_panel(
+                            metrics,
+                            company_name,
+                            ticker,
+                            selected_universe,
+                            sector=classification.get("sector", "N/A"),
+                            industry=classification.get("industry", "N/A"),
+                            show_liquidity_context=show_liquidity_context,
+                            show_full_details=focus_mode,
+                            detail_section="header",
+                        )
+                    elif slot == "details_body":
+                        render_stock_details_panel(
+                            metrics,
+                            company_name,
+                            ticker,
+                            selected_universe,
+                            sector=classification.get("sector", "N/A"),
+                            industry=classification.get("industry", "N/A"),
+                            show_liquidity_context=show_liquidity_context,
+                            show_full_details=focus_mode,
+                            detail_section="body",
+                        )
                     elif slot == "macro":
                         render_macro_context_card(metrics, macro, recent=recent)
                     elif slot == "recent":

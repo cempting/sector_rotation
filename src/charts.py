@@ -79,17 +79,61 @@ def _coerce_numeric_series(values: pd.Series | pd.DataFrame, ticker: str | None 
     return pd.Series(dtype=float)
 
 
-def render_volume_bars(ax: plt.Axes, volume: pd.Series, bar_color: str, fontsize: int = DEFAULT_FONTSIZE) -> None:
+def render_volume_bars(
+    ax: plt.Axes,
+    volume: pd.Series,
+    bar_color: str,
+    fontsize: int = DEFAULT_FONTSIZE,
+    close: pd.Series | None = None,
+    vol_ma: pd.Series | None = None,
+) -> None:
     volume = _coerce_numeric_series(volume)
     if volume.empty:
         return
 
-    if volume.max() > 0:
+    if volume.max() <= 0:
+        return
+
+    # Per-bar up/down coloring when price data is available.
+    if close is not None and not close.empty:
+        close_aligned = _coerce_numeric_series(close).reindex(volume.index)
+        prev_close = close_aligned.shift(1)
+        is_up = (close_aligned >= prev_close).fillna(True)
+
+        # Scale alpha by volume relative to its MA (liquidity vs. average).
+        # Bars well above the MA appear fully opaque; quiet days fade back.
+        if vol_ma is not None and not vol_ma.dropna().empty:
+            ma_aligned = _coerce_numeric_series(vol_ma).reindex(volume.index).ffill().bfill()
+            ma_aligned = ma_aligned.replace(0, np.nan).fillna(volume.mean())
+            rel_vol = (volume / ma_aligned).clip(0.3, 2.0) / 2.0  # 0.15–1.0 range
+        else:
+            vol_max = float(volume.max())
+            rel_vol = (volume / vol_max).clip(0.25, 1.0)
+
+        colors = ["#4ecb71" if up else "#ff6b6b" for up in is_up]
+        alphas = rel_vol.values
+        for xi, vi, ci, ai in zip(volume.index, volume.values, colors, alphas):
+            ax.bar(xi, vi, color=ci, alpha=float(ai) * 0.9, width=VOLUME_BAR_WIDTH)
+    else:
         ax.bar(volume.index, volume.values, color=bar_color, alpha=VOLUME_BAR_ALPHA, width=VOLUME_BAR_WIDTH)
-        ax.set_ylim(0, volume.max() * VOLUME_SCALE_FACTOR)
-        ax.set_ylabel("Volume", fontsize=fontsize - 1, color="lightgray")
-        ax.tick_params(axis='y', labelsize=fontsize - 1, colors="lightgray")
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v/1e6:.0f}M"))
+
+    # Liquidity trend line: 20-day volume MA.
+    if vol_ma is not None and not vol_ma.dropna().empty:
+        vol_ma_clean = _coerce_numeric_series(vol_ma).reindex(volume.index)
+        ax.plot(
+            vol_ma_clean.index,
+            vol_ma_clean.values,
+            color="#ffa500",
+            linewidth=1.0,
+            linestyle="--",
+            alpha=0.85,
+            label="Vol MA20",
+        )
+
+    ax.set_ylim(0, volume.max() * VOLUME_SCALE_FACTOR)
+    ax.set_ylabel("Volume", fontsize=fontsize - 1, color="lightgray")
+    ax.tick_params(axis='y', labelsize=fontsize - 1, colors="lightgray")
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v/1e6:.0f}M"))
 
 
 def render_chart(close: pd.Series, volume: pd.Series, ma_series: pd.Series,
@@ -97,12 +141,13 @@ def render_chart(close: pd.Series, volume: pd.Series, ma_series: pd.Series,
                  legend_label: str = "Price", figsize: tuple = SECTOR_FIGSIZE) -> None:
     close = _coerce_numeric_series(close)
     volume = _coerce_numeric_series(volume).reindex(close.index).fillna(0) if not close.empty else pd.Series(dtype=float)
+    vol_ma20 = volume.rolling(20, min_periods=5).mean() if not volume.empty else None
     fig, ax1 = plt.subplots(figsize=figsize)
     fig.patch.set_facecolor(bg_color)
     ax1.set_facecolor(bg_color)
 
     ax2 = ax1.twinx()
-    render_volume_bars(ax2, volume, bar_color, fontsize=DEFAULT_FONTSIZE)
+    render_volume_bars(ax2, volume, bar_color, fontsize=DEFAULT_FONTSIZE, close=close, vol_ma=vol_ma20)
 
     fontsize = DEFAULT_FONTSIZE if figsize[0] >= FIGSIZE_FONTSIZE_THRESHOLD else SMALL_FONTSIZE
     ax1.plot(close.index, close.values, color="#ffffff", linewidth=LINE_WIDTH, label=legend_label)
@@ -132,6 +177,7 @@ def render_stock_chart(df: pd.DataFrame, ticker: str, figsize: tuple[float, floa
     volume = volume.reindex(close.index).fillna(0)
     ma50 = close.rolling(50).mean()
     ma150 = close.rolling(150).mean()
+    vol_ma20 = volume.rolling(20, min_periods=5).mean()
     bg_color, bar_color = get_trend_colors(ma50)
 
     fig, ax1 = plt.subplots(figsize=figsize)
@@ -139,7 +185,7 @@ def render_stock_chart(df: pd.DataFrame, ticker: str, figsize: tuple[float, floa
     ax1.set_facecolor(bg_color)
 
     ax2 = ax1.twinx()
-    render_volume_bars(ax2, volume, bar_color, fontsize=DEFAULT_FONTSIZE)
+    render_volume_bars(ax2, volume, bar_color, fontsize=DEFAULT_FONTSIZE, close=close, vol_ma=vol_ma20)
 
     fontsize = DEFAULT_FONTSIZE
     ax1.plot(close.index, close.values, color="#ffffff", linewidth=LINE_WIDTH, label="Price")
