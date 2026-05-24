@@ -1,10 +1,70 @@
 """Fetch S&P 500 and S&P 100 lists from Wikipedia, write to CSV."""
+import html as html_lib
 import pandas as pd
 import os
+import re
 from io import StringIO
 from curl_cffi import requests as curl_requests
 
 OUT_DIR = os.path.dirname(__file__) or "."
+
+
+def _looks_like_html_payload(text: str) -> bool:
+    head = (text or "")[:1000].lower()
+    return "<html" in head or "<!doctype html" in head
+
+
+def _parse_holdings_spreadsheetml(text: str) -> pd.DataFrame | None:
+    """Parse iShares SpreadsheetML holdings export into a DataFrame.
+
+    Returns None when the payload is not a holdings SpreadsheetML document.
+    """
+    start = text.find('<ss:Worksheet ss:Name="Holdings">')
+    if start == -1:
+        return None
+    end = text.find("</ss:Worksheet>", start)
+    if end == -1:
+        return None
+
+    block = text[start:end]
+    rows: list[list[str]] = []
+    for row_match in re.finditer(r"<ss:Row>(.*?)</ss:Row>", block, flags=re.DOTALL):
+        row_text = row_match.group(1)
+        vals: list[str] = []
+        for cell_match in re.finditer(r"<ss:Cell(?:\s+[^>]*)?>(.*?)</ss:Cell>", row_text, flags=re.DOTALL):
+            cell_text = cell_match.group(1)
+            data_match = re.search(r"<ss:Data(?:\s+[^>]*)?>(.*?)</ss:Data>", cell_text, flags=re.DOTALL)
+            if data_match:
+                vals.append(html_lib.unescape(data_match.group(1)).strip())
+            else:
+                vals.append("")
+        rows.append(vals)
+
+    header_idx = None
+    header_cols: list[str] = []
+    for i, row in enumerate(rows):
+        if len(row) >= 4 and row[:4] == ["Ticker", "Name", "Sector", "Asset Class"]:
+            header_idx = i
+            header_cols = row
+            break
+    if header_idx is None:
+        return None
+
+    data_rows = rows[header_idx + 1 :]
+    if not data_rows:
+        return None
+
+    normalized_rows = []
+    width = len(header_cols)
+    for row in data_rows:
+        if len(row) < width:
+            row = row + [""] * (width - len(row))
+        elif len(row) > width:
+            row = row[:width]
+        normalized_rows.append(row)
+
+    frame = pd.DataFrame(normalized_rows, columns=header_cols)
+    return frame
 
 def fetch_html(url):
     r = curl_requests.get(url, impersonate="chrome")
@@ -63,45 +123,83 @@ sp100_merged = sp100_merged[["Ticker", "Name", "Sector", "Industry"]].sort_value
 sp100_merged.to_csv(os.path.join(OUT_DIR, "sp100.csv"), index=False)
 print(f"  Wrote {len(sp100_merged)} rows to sp100.csv")
 
-# ---------- Russell 2000 ----------
-print("Fetching Russell 2000 (IWM holdings) from iShares...")
-iwm_url = "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/1467271812596.ajax?fileType=csv&fileName=IWM_holdings&dataType=fund"
-iwm_resp = curl_requests.get(iwm_url, impersonate="chrome")
-iwm_resp.raise_for_status()
-# iShares CSV has metadata rows before the actual header
-lines = iwm_resp.text.split("\n")
-header_idx = None
-for i, line in enumerate(lines):
-    if line.startswith("Ticker,"):
-        header_idx = i
-        break
-assert header_idx is not None, "Could not find header row in IWM CSV"
-iwm_csv = "\n".join(lines[header_idx:])
-iwm = pd.read_csv(StringIO(iwm_csv))
-# Keep only equity rows with a valid ticker
-iwm = iwm[iwm["Asset Class"] == "Equity"].copy()
-iwm = iwm[iwm["Ticker"].notna() & (iwm["Ticker"] != "-")].copy()
-iwm["Ticker"] = iwm["Ticker"].str.strip().str.strip('"')
-iwm["Name"] = iwm["Name"].str.strip().str.strip('"')
-iwm["Sector"] = iwm["Sector"].str.strip().str.strip('"')
-
-# Load financedatabase for industry mapping
-print("  Loading financedatabase for industry lookup...")
+# financedatabase is reused by Russell, NASDAQ, and NYSE sections.
 import financedatabase as fd
 eq = fd.Equities()
-fdb = eq.select()
-fdb = fdb.reset_index().rename(columns={"symbol": "Ticker", "industry": "FDB_Industry", "sector": "FDB_Sector"})
-fdb = fdb[["Ticker", "FDB_Sector", "FDB_Industry"]].drop_duplicates(subset="Ticker")
 
-# Merge IWM tickers with financedatabase industries
-russell = iwm[["Ticker", "Name", "Sector"]].merge(fdb[["Ticker", "FDB_Industry"]], on="Ticker", how="left")
-russell = russell.rename(columns={"FDB_Industry": "Industry"})
-russell["Sector"] = russell["Sector"].fillna("undefined").str.strip().replace("", "undefined")
-russell["Industry"] = russell["Industry"].fillna("undefined").str.strip().replace("", "undefined")
-russell = russell[["Ticker", "Name", "Sector", "Industry"]].sort_values("Ticker").reset_index(drop=True)
-russell.to_csv(os.path.join(OUT_DIR, "russell2000.csv"), index=False)
-print(f"  Wrote {len(russell)} rows to russell2000.csv")
-print(f"  Industry coverage: {russell['Industry'].notna().sum()}/{len(russell)} ({100*russell['Industry'].notna().mean():.1f}%)")
+# ---------- Russell 2000 ----------
+print("Fetching Russell 2000 (IWM holdings) from iShares...")
+iwm_urls = [
+    # Newer endpoint: SpreadsheetML workbook with a "Holdings" worksheet.
+    "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239710&component=fundDownload&userType=individual",
+    # Legacy endpoint: historically returned CSV.
+    "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/1467271812596.ajax?fileType=csv&fileName=IWM_holdings&dataType=fund",
+]
+
+iwm = None
+for iwm_url in iwm_urls:
+    iwm_resp = curl_requests.get(iwm_url, impersonate="chrome")
+    iwm_resp.raise_for_status()
+    spreadsheetml = _parse_holdings_spreadsheetml(iwm_resp.text)
+    if spreadsheetml is not None:
+        iwm = spreadsheetml
+        print(f"  Loaded holdings from SpreadsheetML endpoint: {iwm_url}")
+        break
+    if _looks_like_html_payload(iwm_resp.text):
+        continue
+
+    # Legacy CSV parsing path.
+    lines = iwm_resp.text.split("\n")
+    header_idx = None
+    for i, line in enumerate(lines):
+        if line.startswith("Ticker,"):
+            header_idx = i
+            break
+    if header_idx is None:
+        continue
+    iwm_csv = "\n".join(lines[header_idx:])
+    iwm = pd.read_csv(StringIO(iwm_csv))
+    print(f"  Loaded holdings from CSV endpoint: {iwm_url}")
+    break
+
+if iwm is None:
+    fallback_path = os.path.join(OUT_DIR, "russell2000.csv")
+    if os.path.exists(fallback_path):
+        print("  iShares endpoints did not return parsable holdings payloads.")
+        print("  Reusing existing russell2000.csv and continuing...")
+        russell = pd.read_csv(fallback_path)
+        expected_cols = ["Ticker", "Name", "Sector", "Industry"]
+        if list(russell.columns) != expected_cols:
+            raise RuntimeError(
+                f"Fallback russell2000.csv has unexpected columns: {list(russell.columns)}"
+            )
+    else:
+        raise RuntimeError(
+            "iShares endpoints were not parsable and no local russell2000.csv fallback exists"
+        )
+else:
+    # Keep only equity rows with a valid ticker
+    iwm = iwm[iwm["Asset Class"] == "Equity"].copy()
+    iwm = iwm[iwm["Ticker"].notna() & (iwm["Ticker"] != "-")].copy()
+    iwm["Ticker"] = iwm["Ticker"].str.strip().str.strip('"')
+    iwm["Name"] = iwm["Name"].str.strip().str.strip('"')
+    iwm["Sector"] = iwm["Sector"].str.strip().str.strip('"')
+
+    # Load financedatabase for industry mapping
+    print("  Loading financedatabase for industry lookup...")
+    fdb = eq.select()
+    fdb = fdb.reset_index().rename(columns={"symbol": "Ticker", "industry": "FDB_Industry", "sector": "FDB_Sector"})
+    fdb = fdb[["Ticker", "FDB_Sector", "FDB_Industry"]].drop_duplicates(subset="Ticker")
+
+    # Merge IWM tickers with financedatabase industries
+    russell = iwm[["Ticker", "Name", "Sector"]].merge(fdb[["Ticker", "FDB_Industry"]], on="Ticker", how="left")
+    russell = russell.rename(columns={"FDB_Industry": "Industry"})
+    russell["Sector"] = russell["Sector"].fillna("undefined").str.strip().replace("", "undefined")
+    russell["Industry"] = russell["Industry"].fillna("undefined").str.strip().replace("", "undefined")
+    russell = russell[["Ticker", "Name", "Sector", "Industry"]].sort_values("Ticker").reset_index(drop=True)
+    russell.to_csv(os.path.join(OUT_DIR, "russell2000.csv"), index=False)
+
+print(f"  Russell 2000 rows available: {len(russell)}")
 
 # ---------- STOXX Europe 600 ----------
 print("Fetching STOXX Europe 600 from Wikipedia...")

@@ -2,7 +2,15 @@ import pandas as pd
 import os
 import time
 
-from sector_rotation.src.core.data.cache import load_ticker_from_cache, save_ticker_to_cache, clear_ticker_cache
+from sector_rotation.src.core.data.cache import (
+    clear_ticker_cache,
+    clear_ticker_unavailable_flag,
+    get_ticker_unavailable_retry_after_seconds,
+    is_ticker_temporarily_unavailable,
+    load_ticker_from_cache,
+    mark_ticker_temporarily_unavailable,
+    save_ticker_to_cache,
+)
 
 def test_cache_roundtrip(tmp_path, monkeypatch):
     # Patch cache dir to temp
@@ -31,3 +39,29 @@ def test_cache_ignores_entries_older_than_one_day(tmp_path, monkeypatch):
     os.utime(path, (stale_time, stale_time))
 
     assert load_ticker_from_cache(ticker) is None
+
+
+def test_ticker_unavailable_registry_roundtrip(tmp_path, monkeypatch):
+    registry_file = tmp_path / "unavailable_tickers.json"
+    monkeypatch.setattr("sector_rotation.src.core.data.cache.UNAVAILABLE_TICKERS_FILE", registry_file)
+
+    mark_ticker_temporarily_unavailable("dead", reason="possibly delisted", cooldown_seconds=120)
+
+    assert is_ticker_temporarily_unavailable("DEAD") is True
+    assert get_ticker_unavailable_retry_after_seconds("DEAD") > 0
+
+    clear_ticker_unavailable_flag("DEAD")
+    assert is_ticker_temporarily_unavailable("DEAD") is False
+
+
+def test_ticker_unavailable_registry_drops_expired_entries(tmp_path, monkeypatch):
+    registry_file = tmp_path / "unavailable_tickers.json"
+    monkeypatch.setattr("sector_rotation.src.core.data.cache.UNAVAILABLE_TICKERS_FILE", registry_file)
+
+    registry_file.write_text(
+        '{"OLD":{"until":1,"reason":"expired"},"LIVE":{"until":99999999999,"reason":"active"}}',
+        encoding="utf-8",
+    )
+
+    assert is_ticker_temporarily_unavailable("OLD") is False
+    assert is_ticker_temporarily_unavailable("LIVE") is True

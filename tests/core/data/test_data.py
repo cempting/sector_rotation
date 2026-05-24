@@ -164,3 +164,62 @@ def test_fetch_market_data_with_status_uses_stale_cache_when_blocked(monkeypatch
     assert "out of date" in str(status["AAPL"]["label"]).lower()
 
     clear_download_status()
+
+
+def test_fetch_market_data_with_status_skips_unavailable_ticker_download(monkeypatch):
+    clear_download_status()
+
+    def fail_download(*args, **kwargs):
+        raise AssertionError("network should not be called for unavailable cooldown tickers")
+
+    monkeypatch.setattr(
+        "sector_rotation.src.core.data.data.is_ticker_temporarily_unavailable",
+        lambda ticker: ticker == "DEAD",
+    )
+    monkeypatch.setattr(
+        "sector_rotation.src.core.data.data.get_ticker_unavailable_retry_after_seconds",
+        lambda ticker: 600,
+    )
+    monkeypatch.setattr("sector_rotation.src.core.data.data.yf.download", fail_download)
+
+    data, status = fetch_market_data_with_status(["DEAD"], force_refresh=False, use_cache=True)
+
+    assert "DEAD" in data
+    assert data["DEAD"].empty
+    assert status["DEAD"]["source"] == "unavailable_cooldown"
+    assert "retry" in str(status["DEAD"]["label"]).lower()
+
+
+def test_fetch_market_data_with_status_marks_unavailable_after_retry_failure(monkeypatch):
+    clear_download_status()
+
+    calls = {"count": 0}
+
+    def fake_download(*args, **kwargs):
+        calls["count"] += 1
+        return pd.DataFrame()
+
+    marked: list[str] = []
+
+    monkeypatch.setattr(
+        "sector_rotation.src.core.data.data.is_ticker_temporarily_unavailable",
+        lambda ticker: False,
+    )
+    monkeypatch.setattr(
+        "sector_rotation.src.core.data.data.mark_ticker_temporarily_unavailable",
+        lambda ticker, reason, cooldown_seconds: marked.append(ticker),
+    )
+    monkeypatch.setattr(
+        "sector_rotation.src.core.data.data.get_ticker_unavailable_retry_after_seconds",
+        lambda ticker: 3600,
+    )
+    monkeypatch.setattr("sector_rotation.src.core.data.data.load_ticker_from_cache", lambda ticker: None)
+    monkeypatch.setattr("sector_rotation.src.core.data.data.yf.download", fake_download)
+
+    data, status = fetch_market_data_with_status(["ZZZZ"], force_refresh=False, use_cache=True)
+
+    assert "ZZZZ" in data
+    assert data["ZZZZ"].empty
+    assert status["ZZZZ"]["source"] == "unavailable_cooldown"
+    assert marked == ["ZZZZ"]
+    assert calls["count"] >= 2

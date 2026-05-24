@@ -60,12 +60,12 @@ BEN,Franklin Resources,Financials,Asset Management & Custody Banks
 BF.B,Brown–Forman,Consumer Staples,Distillers & Vintners
 BG,Bunge Global,Consumer Staples,Agricultural Products & Services
 BIIB,Biogen,Health Care,Biotechnology
-BK,BNY Mellon,Financials,Asset Management & Custody Banks
 BKNG,Booking Holdings,Consumer Discretionary,"Hotels, Resorts & Cruise Lines"
 BKR,Baker Hughes,Energy,Oil & Gas Equipment & Services
 BLDR,Builders FirstSource,Industrials,Building Products
 BLK,BlackRock,Financials,Asset Management & Custody Banks
 BMY,Bristol Myers Squibb,Health Care,Pharmaceuticals
+BNY,BNY Mellon,Financials,Asset Management & Custody Banks
 BR,Broadridge Financial Solutions,Industrials,Data Processing & Outsourced Services
 BRK.B,Berkshire Hathaway,Financials,Multi-Sector Holdings
 BRO,Brown & Brown,Financials,Insurance Brokers
@@ -82,7 +82,7 @@ CB,Chubb Limited,Financials,Property & Casualty Insurance
 CBOE,Cboe Global Markets,Financials,Financial Exchanges & Data
 CBRE,CBRE Group,Real Estate,Real Estate Services
 CCI,Crown Castle,Real Estate,Telecom Tower REITs
-CCL,Carnival,Consumer Discretionary,"Hotels, Resorts & Cruise Lines"
+CCL,Carnival Corporation,Consumer Discretionary,"Hotels, Resorts & Cruise Lines"
 CDNS,Cadence Design Systems,Information Technology,Application Software
 CDW,CDW Corporation,Information Technology,Technology Distributors
 CEG,Constellation Energy,Utilities,Electric Utilities
@@ -122,7 +122,6 @@ CSCO,Cisco,Information Technology,Communications Equipment
 CSGP,CoStar Group,Real Estate,Real Estate Services
 CSX,CSX Corporation,Industrials,Rail Transportation
 CTAS,Cintas,Industrials,Diversified Support Services
-CTRA,Coterra,Energy,Oil & Gas Exploration & Production
 CTSH,Cognizant,Information Technology,IT Consulting & Other Services
 CTVA,Corteva,Materials,Fertilizers & Agricultural Chemicals
 CVNA,Carvana,Consumer Discretionary,Automotive Retail
@@ -465,6 +464,7 @@ UPS,United Parcel Service,Industrials,Air Freight & Logistics
 URI,United Rentals,Industrials,Trading Companies & Distributors
 USB,U.S. Bancorp,Financials,Diversified Banks
 V,Visa Inc.,Financials,Transaction & Payment Processing Services
+VEEV,Veeva Systems,Health Care,Health Care Technology
 VICI,Vici Properties,Real Estate,Hotel & Resort REITs
 VLO,Valero Energy,Energy,Oil & Gas Refining & Marketing
 VLTO,Veralto,Industrials,Environmental & Facilities Services

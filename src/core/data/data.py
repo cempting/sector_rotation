@@ -9,11 +9,20 @@ from ..constants import (
 )
 from .cache import load_ticker_from_cache, save_ticker_to_cache, clear_ticker_cache
 from .cache import get_ticker_cache_age_seconds, load_ticker_from_cache_any_age
+from .cache import (
+    clear_ticker_unavailable_flag,
+    get_ticker_unavailable_retry_after_seconds,
+    is_ticker_temporarily_unavailable,
+    mark_ticker_temporarily_unavailable,
+)
 from .download_status import (
     is_download_blocked,
     record_download_failure,
     record_download_success,
 )
+
+
+UNAVAILABLE_TICKER_COOLDOWN_SECONDS = 6 * 60 * 60
 
 
 def get_db_sector_name(sector: str) -> str:
@@ -90,6 +99,11 @@ def _format_data_freshness_label(source: str, age_seconds: int | None = None) ->
             return "Cached (out of date)"
         hours = max(1, int(age_seconds // 3600))
         return f"Cached (out of date, {hours}h old)"
+    if source == "unavailable_cooldown":
+        if age_seconds is None:
+            return "Temporarily unavailable (cooldown)"
+        mins = max(1, int(age_seconds // 60))
+        return f"Temporarily unavailable (retry in about {mins} min)"
     return "No data"
 
 
@@ -111,6 +125,17 @@ def _fetch_market_data_bundle(
     missing: list[str] = []
 
     for ticker in ordered:
+        if is_ticker_temporarily_unavailable(ticker):
+            retry_after = get_ticker_unavailable_retry_after_seconds(ticker)
+            results[ticker] = pd.DataFrame()
+            status_map[ticker] = {
+                "source": "unavailable_cooldown",
+                "is_stale": False,
+                "age_seconds": retry_after,
+                "label": _format_data_freshness_label("unavailable_cooldown", retry_after),
+            }
+            continue
+
         if cache_enabled and not force_refresh:
             cached = load_ticker_from_cache(ticker)
             if cached is not None and not cached.empty:
@@ -130,6 +155,7 @@ def _fetch_market_data_bundle(
         for ticker, df in downloaded.items():
             results[ticker] = df
             if df is not None and not df.empty:
+                clear_ticker_unavailable_flag(ticker)
                 status_map[ticker] = {
                     "source": "live",
                     "is_stale": False,
@@ -145,6 +171,7 @@ def _fetch_market_data_bundle(
             df = single.get(ticker, pd.DataFrame())
             results[ticker] = df
             if df is not None and not df.empty:
+                clear_ticker_unavailable_flag(ticker)
                 status_map[ticker] = {
                     "source": "live",
                     "is_stale": False,
@@ -153,6 +180,19 @@ def _fetch_market_data_bundle(
                 }
                 if cache_enabled:
                     save_ticker_to_cache(ticker, df)
+            elif not is_download_blocked("yfinance"):
+                mark_ticker_temporarily_unavailable(
+                    ticker,
+                    reason="No data returned after batch and single-symbol retries.",
+                    cooldown_seconds=UNAVAILABLE_TICKER_COOLDOWN_SECONDS,
+                )
+                retry_after = get_ticker_unavailable_retry_after_seconds(ticker)
+                status_map[ticker] = {
+                    "source": "unavailable_cooldown",
+                    "is_stale": False,
+                    "age_seconds": retry_after,
+                    "label": _format_data_freshness_label("unavailable_cooldown", retry_after),
+                }
 
     if cache_enabled and allow_stale_cache_fallback and blocked:
         for ticker in ordered:
