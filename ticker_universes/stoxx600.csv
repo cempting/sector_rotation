@@ -7,7 +7,6 @@ ABF,Associated British Foods,"Food, Beverage and Tobacco","Food, Beverage and To
 ABI,Anheuser-Busch InBev,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
 ABN,ABN AMRO,Banks,Banks
 AC,Accor,Travel and Leisure,Travel and Leisure
-ACS,ACS,Construction and Materials,Construction and Materials
 ACS,ACS Group,Construction and Materials,Construction and Materials
 ACX,Acerinox,Basic Resources,Basic Resources
 ADEN,Adecco,Industrial Goods and Services,Industrial Goods and Services
@@ -49,9 +48,7 @@ AV,Aviva,Insurance,Insurance
 AZE,Azelis Group,Industrial Goods and Services,Industrial Goods and Services
 AZN,AstraZeneca,Health Care,Health Care
 BA,BAE Systems,Industrial Goods and Services,Industrial Goods and Services
-BA.,BAE Systems,Industrial Goods and Services,Industrial Goods and Services
 BAER,Julius Baer,Banks,Banks
-BAER,Julius Baer,Financial Services,Financial Services
 BALD B,Balder,Real Estate,Real Estate
 BALN,Baloise,Insurance,Insurance
 BARC,Barclays,Banks,Banks
@@ -71,21 +68,17 @@ BME,B&M European Value Retail,Retail,Retail
 BMW,BMW,Automobiles and Parts,Automobiles and Parts
 BNPP,BNP Paribas,Banks,Banks
 BNR,Brenntag,Chemicals,Chemicals
-BNR,Brenntag,Chemicals,Chemicals
 BNZL,Bunzl,Industrial Goods and Services,Industrial Goods and Services
 BOL,Boliden AB,Basic Resources,Basic Resources
 BOL,Bolloré,Industrial Goods and Services,Industrial Goods and Services
 BOSS,Hugo Boss,Consumer Products and Services,Consumer Products and Services
-BOUY,Bouygues,Construction and Materials,Construction and Materials
 BP,BP,Energy,Energy
 BPOST,Bpost,Industrial Goods and Services,Industrial Goods and Services
-BRBY,Burberry,Consumer Products and Services,Consumer Products and Services
 BRBY,Burberry,Consumer Products and Services,Consumer Products and Services
 BRNW,Brunello Cucinelli,Consumer Products and Services,Consumer Products and Services
 BT.A,BT Group,Telecommunications,Telecommunications
 BVI,Bureau Veritas,Industrial Goods and Services,Industrial Goods and Services
 BYG,Big Yellow Group,Real Estate,Real Estate
-CABK,CaixaBank,Banks,Banks
 CABK,CaixaBank,Banks,Banks
 CAGR,Crédit Agricole,Banks,Banks
 CAPP,Capgemini,Technology,Technology
@@ -97,20 +90,17 @@ CCH,Coca-Cola HBC,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
 CDR,CD Projekt,Consumer Products and Services,Consumer Products and Services
 CFR,Richemont,Consumer Products and Services,Consumer Products and Services
 CLN,Clariant,Chemicals,Chemicals
-CLN,Clariant,Chemicals,Chemicals
 CNA,Centrica,Utilities,Utilities
 COLR,Colruyt,"Personal Care, Drug and Grocery Stores","Personal Care, Drug and Grocery Stores"
 CON,Continental,Automobiles and Parts,Automobiles and Parts
 CPG,Compass Group,Travel and Leisure,Travel and Leisure
 CPR,Davide Campari-Milano,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
 CRDA,Croda International,Chemicals,Chemicals
-CRDA,Croda International,Chemicals,Chemicals
 CS,AXA,Insurance,Insurance
 CTEC,ConvaTec,Health Care,Health Care
 CTG,Computer Center,Technology,Technology
 CTS,CTS Eventim,Media,Media
 DANO,Danone,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
-DASH,Delivery Hero,Retail,Retail
 DB1,Deutsche Börse,Financial Services,Financial Services
 DEMANT,Demant,Health Care,Health Care
 DG,Vinci,Construction and Materials,Construction and Materials
@@ -133,16 +123,13 @@ EDPR,EDP Renováveis,Utilities,Utilities
 EDV,Endeavour Mining,Basic Resources,Basic Resources
 EFGI,Eiffage,Construction and Materials,Construction and Materials
 ELISA,Elisa,Telecommunications,Telecommunications
-ELUX B,Electrolux,Consumer Products and Services,Consumer Products and Services
-ELUXb,Electrolux,Consumer Products and Services,Consumer Products and Services
+ELUX-B,Electrolux,Consumer Products and Services,Consumer Products and Services
 EMSN,Ems-Chemie,Chemicals,Chemicals
 EN,Bouygues,Construction and Materials,Construction and Materials
 ENEL,Enel,Utilities,Utilities
 ENG,Enagás,Utilities,Utilities
 ENGI,Engie,Utilities,Utilities
-ENGIE,Engie,Utilities,Utilities
 ENI,Eni,Energy,Energy
-ENT,Entain,Travel and Leisure,Travel and Leisure
 ENT,Entain,Travel and Leisure,Travel and Leisure
 ENX,Euronext,Financial Services,Financial Services
 EOAN,E.ON,Utilities,Utilities
@@ -160,7 +147,6 @@ FER,Ferrovial,Construction and Materials,Construction and Materials
 FERR,Ferrari,Automobiles and Parts,Automobiles and Parts
 FLOW,Flow Traders,Financial Services,Financial Services
 FLTR,Flutter Entertainment,Travel and Leisure,Travel and Leisure
-FLTR,Flutter Entertainment,Travel and Leisure,Travel and Leisure
 FME,Fresenius Medical Care,Health Care,Health Care
 FNTN,Freenet,Telecommunications,Telecommunications
 FOR,FCC,Construction and Materials,Construction and Materials
@@ -175,7 +161,6 @@ GALE,Galenica,Health Care,Health Care
 GALP,Galp Energia,Energy,Energy
 GAW,Games Workshop,Consumer Products and Services,Consumer Products and Services
 GEBN,Geberit,Construction and Materials,Construction and Materials
-GEBN,Geberit,Construction and Materials,Construction and Materials
 GET,Getlink,Industrial Goods and Services,Industrial Goods and Services
 GF,Georg Fischer,Industrial Goods and Services,Industrial Goods and Services
 GFC,Gecina,Real Estate,Real Estate
@@ -187,7 +172,6 @@ GLEN,Glencore,Basic Resources,Basic Resources
 GN,GN Store Nord,Health Care,Health Care
 GREG,Greggs,Retail,Retail
 GRF,Grifols,Health Care,Health Care
-GRLS,Grifols,Health Care,Health Care
 GSK,GSK plc,Health Care,Health Care
 GWI,Gruppo Campari,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
 HAS,Hays,Industrial Goods and Services,Industrial Goods and Services
@@ -197,9 +181,7 @@ HELN,Helvetia Insurance,Insurance,Insurance
 HEN3,Henkel,Consumer Products and Services,Consumer Products and Services
 HIK,Hikma Pharmaceuticals,Health Care,Health Care
 HLI,Haleon,Consumer Products and Services,Consumer Products and Services
-HLM,Halma,Industrial Goods and Services,Industrial Goods and Services
 HLMA,Halma plc,Industrial Goods and Services,Industrial Goods and Services
-HLMA,Halma,Industrial Goods and Services,Industrial Goods and Services
 HMB,H&M,Retail,Retail
 HNR,Hannover Re,Insurance,Insurance
 HOLN,Holcim,Construction and Materials,Construction and Materials
@@ -221,7 +203,6 @@ INCH,Inchcape,Retail,Retail
 INDT,Indutrade,Industrial Goods and Services,Industrial Goods and Services
 INDV,Indivior,Health Care,Health Care
 INF,Informa,Media,Media
-INF,Informa,Media,Media
 INGA,ING Group,Banks,Banks
 INP,Investec,Financial Services,Financial Services
 INPST,InPost,Industrial Goods and Services,Industrial Goods and Services
@@ -232,20 +213,15 @@ ITRK,Intertek,Industrial Goods and Services,Industrial Goods and Services
 ITV,ITV,Media,Media
 ITX,Inditex,Retail,Retail
 JD,JD Sports,Retail,Retail
-JD,JD Sports,Retail,Retail
 JMAT,Johnson Matthey,Chemicals,Chemicals
-JMAT,Johnson Matthey,Chemicals,Chemicals
-JMT,Jerónimo Martins,Retail,Retail
-JMT,Jerónimo Martins,Retail,Retail
 JMT,Jerónimo Martins,Retail,Retail
 JUST,Just Eat Takeaway,Retail,Retail
 KBC,KBC Group,Banks,Banks
 KBC,KBC Group,Banks,Banks
 KER,Kering,Consumer Products and Services,Consumer Products and Services
-KGF,Kingfisher plc,Retail,Retail
 KGF,Kingfisher,Retail,Retail
+KGF,Kingfisher plc,Retail,Retail
 KNEBV,Kone,Industrial Goods and Services,Industrial Goods and Services
-KNIN,Kuehne + Nagel,Industrial Goods and Services,Industrial Goods and Services
 KNIN,Kuehne + Nagel,Industrial Goods and Services,Industrial Goods and Services
 KPN,KPN,Telecommunications,Telecommunications
 LAND,Land Securities,Real Estate,Real Estate
@@ -270,7 +246,6 @@ LUN,Lundin Energy,Energy,Energy
 LXS,Lanxess,Chemicals,Chemicals
 MAERSK B,Maersk,Industrial Goods and Services,Industrial Goods and Services
 MAN,MAN SE,Industrial Goods and Services,Industrial Goods and Services
-MAN,MAN SE,Industrial Goods and Services,Industrial Goods and Services
 MB,Mediobanca,Financial Services,Financial Services
 MBG,Mercedes-Benz Group,Automobiles and Parts,Automobiles and Parts
 MC,LVMH,Consumer Products and Services,Consumer Products and Services
@@ -278,7 +253,6 @@ MCG,Mobico Group,Travel and Leisure,Travel and Leisure
 MEL,Meliá Hotels,Travel and Leisure,Travel and Leisure
 MELE,Melexis,Technology,Technology
 METSO,Metso,Industrial Goods and Services,Industrial Goods and Services
-MGG,M&G,Financial Services,Financial Services
 MICP,Michelin,Automobiles and Parts,Automobiles and Parts
 MKS,Marks & Spencer,Retail,Retail
 MNDI,Mondi,Industrial Goods and Services,Industrial Goods and Services
@@ -290,11 +264,9 @@ MRL,Merlin Properties,Real Estate,Real Estate
 MRW,Morrisons,Retail,Retail
 MT,ArcelorMittal,Basic Resources,Basic Resources
 MTX,MTU Aero Engines,Industrial Goods and Services,Industrial Goods and Services
-MTX,MTU Aero Engines,Industrial Goods and Services,Industrial Goods and Services
 MUV2,Munich Re,Insurance,Insurance
 NAB,National Bank of Greece,Banks,Banks
 NDA FI,Nordea,Banks,Banks
-NDA SE,Nordea,Banks,Banks
 NEM,Nemetschek,Technology,Technology
 NEOEN,Neoen,Utilities,Utilities
 NESN,Nestlé,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
@@ -310,7 +282,6 @@ NOV N,Novartis,Health Care,Health Care
 NOVO B,Novo Nordisk,Health Care,Health Care
 NSN,Neste,Energy,Energy
 NTGY,Naturgy,Utilities,Utilities
-NTGY,Naturgy,Utilities,Utilities
 NWG,NatWest Group,Banks,Banks
 NXT,Next plc,Retail,Retail
 OCDO,Ocado,Retail,Retail
@@ -320,8 +291,6 @@ OMV,OMV,Energy,Energy
 ONT,Ontex,"Personal Care, Drug and Grocery Stores","Personal Care, Drug and Grocery Stores"
 OR,L'Oréal,"Personal Care, Drug and Grocery Stores","Personal Care, Drug and Grocery Stores"
 ORA,Orange S.A.,Telecommunications,Telecommunications
-ORAN,Orange S.A.,Telecommunications,Telecommunications
-OREP,L'Oréal,Consumer Products and Services,Consumer Products and Services
 ORK,Orkla ASA,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
 ORSTED,Ørsted,Utilities,Utilities
 P911,Porsche,Automobiles and Parts,Automobiles and Parts
@@ -331,18 +300,15 @@ PBB,Deutsche Pfandbriefbank,Banks,Banks
 PERP,Pernod Ricard,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
 PGHN,Partners Group,Financial Services,Financial Services
 PHNX,Phoenix Group,Insurance,Insurance
-PHNX,Phoenix Group,Insurance,Insurance
 PIRC,Pirelli,Automobiles and Parts,Automobiles and Parts
 PLPH,PolyPeptide,Health Care,Health Care
 PNL,PostNL,Industrial Goods and Services,Industrial Goods and Services
 PNN,Pennon Group,Utilities,Utilities
 PROX,Proximus,Telecommunications,Telecommunications
-PRU,Prudential,Insurance,Insurance
 PRU,Prudential plc,Insurance,Insurance
 PRY,Prysmian,Industrial Goods and Services,Industrial Goods and Services
-PRY,Prysmian,Industrial Goods and Services,Industrial Goods and Services
-PSN,Publicis,Media,Media
 PSN,Persimmon plc,Consumer Products and Services,Consumer Products and Services
+PSN,Publicis,Media,Media
 PSON,Pearson,Media,Media
 PST,Poste Italiane,Insurance,Insurance
 PUM,Puma,Consumer Products and Services,Consumer Products and Services
@@ -353,20 +319,17 @@ RCO,Rémy Cointreau,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
 REC,Recordati,Health Care,Health Care
 RED,Redeia,Utilities,Utilities
 REL,RELX,Media,Media
-RENA,Renault,Automobiles and Parts,Automobiles and Parts
 REP,Repsol,Energy,Energy
 RHM,Rheinmetall,Industrial Goods and Services,Industrial Goods and Services
 RIGN,Transocean,Energy,Energy
-RIO,Rio Tinto,Basic Resources,Basic Resources
 RIO,Rio Tinto Group,Basic Resources,Basic Resources
 RKT,Reckitt,"Personal Care, Drug and Grocery Stores","Personal Care, Drug and Grocery Stores"
 RMS,Hermès,Consumer Products and Services,Consumer Products and Services
 RMV,Rightmove,Real Estate,Real Estate
-RNL,Renault,Automobiles and Parts,Automobiles and Parts
+RNO,Renault,Automobiles and Parts,Automobiles and Parts
 ROG,Roche Holding,Health Care,Health Care
 ROL,Royal Mail,Industrial Goods and Services,Industrial Goods and Services
 RR,Rolls-Royce Holdings,Industrial Goods and Services,Industrial Goods and Services
-RR.,Rolls-Royce,Industrial Goods and Services,Industrial Goods and Services
 RTO,Rentokil Initial,Industrial Goods and Services,Industrial Goods and Services
 RWE,RWE,Utilities,Utilities
 RXL,Rexel,Industrial Goods and Services,Industrial Goods and Services
@@ -375,18 +338,14 @@ SAB,Banco Sabadell,Banks,Banks
 SAF,Safran,Industrial Goods and Services,Industrial Goods and Services
 SALM,SalMar,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
 SAMPO,Sampo Group,Insurance,Insurance
+SAN,Sanofi,Health Care,Health Care
 SAN,Banco Santander,Banks,Banks
 SAND,Sandvik AB,Industrial Goods and Services,Industrial Goods and Services
-SAND,Sandvik,Industrial Goods and Services,Industrial Goods and Services
 SANO,Sanoma,Media,Media
 SAP,SAP,Technology,Technology
-SASY,Sanofi,Health Care,Health Care
 SBRY,Sainsbury's,"Personal Care, Drug and Grocery Stores","Personal Care, Drug and Grocery Stores"
-SBRY,Sainsbury's,Retail,Retail
 SCHA,Schibsted,Media,Media
-SCHN,Schneider Electric,Industrial Goods and Services,Industrial Goods and Services
 SCHP,Schindler Group,Industrial Goods and Services,Industrial Goods and Services
-SCMN,Swisscom,Telecommunications,Telecommunications
 SCMN,Swisscom,Telecommunications,Telecommunications
 SCR,SCOR SE,Insurance,Insurance
 SCT,Softcat,Technology,Technology
@@ -395,11 +354,7 @@ SDZ,Sandoz,Health Care,Health Care
 SEB,Skandinaviska Enskilda Banken,Banks,Banks
 SECU B,Securitas AB,Industrial Goods and Services,Industrial Goods and Services
 SGE,Sage Group,Technology,Technology
-SGE,Sage Group,Technology,Technology
-SGE,Sage Group,Technology,Technology
-SGEF,Vinci SA,Construction and Materials,Construction and Materials
 SGO,Saint-Gobain,Construction and Materials,Construction and Materials
-SGOB,Saint-Gobain,Construction and Materials,Construction and Materials
 SGRO,Segro,Real Estate,Real Estate
 SGSN,SGS S.A.,Industrial Goods and Services,Industrial Goods and Services
 SHB B,Svenska Handelsbanken,Banks,Banks
@@ -410,44 +365,29 @@ SIG,SIG Group,Industrial Goods and Services,Industrial Goods and Services
 SIKA,Sika,Construction and Materials,Construction and Materials
 SIX2,Sixt,Consumer Products and Services,Consumer Products and Services
 SKA B,Skanska,Construction and Materials,Construction and Materials
-SKF B,SKF,Industrial Goods and Services,Industrial Goods and Services
-SKFb,SKF,Industrial Goods and Services,Industrial Goods and Services
+SKF-B,SKF,Industrial Goods and Services,Industrial Goods and Services
 SKG,Smurfit Kappa,Industrial Goods and Services,Industrial Goods and Services
 SKY,Sky Group,Media,Media
 SLHN,Swiss Life,Insurance,Insurance
 SMDS,DS Smith,Industrial Goods and Services,Industrial Goods and Services
 SMIN,Smiths Group,Industrial Goods and Services,Industrial Goods and Services
-SMIN,Smiths Group,Industrial Goods and Services,Industrial Goods and Services
-SMIN,Smiths Group,Industrial Goods and Services,Industrial Goods and Services
 SMT,Scottish Mortgage Investment Trust,Financial Services,Financial Services
 SN,Smith & Nephew,Health Care,Health Care
-SN,Smith & Nephew,Health Care,Health Care
-SN.,Smith & Nephew,Health Care,Health Care
-SNY,Sanofi,Health Care,Health Care
-SOGN,Société Générale,Banks,Banks
 SOLB,Solvay,Chemicals,Chemicals
-SON,Sonova,Health Care,Health Care
 SOON,Sonova,Health Care,Health Care
 SOW,Software,Technology,Technology
 SPSN,Swiss Prime Site,Real Estate,Real Estate
-SPX,Spirax-Sarco Engineering,Industrial Goods and Services,Industrial Goods and Services
-SPX,Spirax-Sarco Engineering,Industrial Goods and Services,Industrial Goods and Services
 SPX,Spirax-Sarco Engineering,Industrial Goods and Services,Industrial Goods and Services
 SRB,Storebrand,Insurance,Insurance
 SRENH,Swiss Re,Insurance,Insurance
 SRG,Snam,Energy,Energy
 SRT3,Sartorius,Health Care,Health Care
 SSE,SSE plc,Utilities,Utilities
-SSE,SSE,Utilities,Utilities
-STAN,Standard Chartered,Banks,Banks
 STAN,Standard Chartered,Banks,Banks
 STER,Stora Enso,Basic Resources,Basic Resources
 STJ,St. James's Place,Financial Services,Financial Services
 STLAM,Stellantis,Automobiles and Parts,Automobiles and Parts
-STLAM,Stellantis,Automobiles and Parts,Automobiles and Parts
 STMN,Straumann,Health Care,Health Care
-STMN,Straumann,Health Care,Health Care
-STMPA,STMicroelectronics,Technology,Technology
 STMPA,STMicroelectronics,Technology,Technology
 SU,Schneider Electric,Industrial Goods and Services,Industrial Goods and Services
 SVT,Severn Trent,Utilities,Utilities
@@ -455,14 +395,12 @@ SW,Sodexo,Travel and Leisure,Travel and Leisure
 SWECO B,Sweco,Construction and Materials,Construction and Materials
 SWED A,Swedbank,Banks,Banks
 SWMA,Swedish Match,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
-SWMA,Swedish Match,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
 SXS,Spectris,Industrial Goods and Services,Industrial Goods and Services
 SY1,Symrise,Chemicals,Chemicals
 TATE,Tate & Lyle,"Food, Beverage and Tobacco","Food, Beverage and Tobacco"
 TEF,Telefónica,Telecommunications,Telecommunications
 TEL,Telenor,Telecommunications,Telecommunications
-TEL2 B,Tele2,Telecommunications,Telecommunications
-TEL2b,Tele2,Telecommunications,Telecommunications
+TEL2-B,Tele2,Telecommunications,Telecommunications
 TELIA,Telia Company,Telecommunications,Telecommunications
 TEMN,Temenos Group,Technology,Technology
 TEN,Tenaris,Energy,Energy
@@ -476,8 +414,8 @@ TJW,Taylor Wimpey,Consumer Products and Services,Consumer Products and Services
 TKA,ThyssenKrupp,Industrial Goods and Services,Industrial Goods and Services
 TLX,Talanx,Insurance,Insurance
 TMV,TeamViewer,Technology,Technology
-TOM,Tomra,Industrial Goods and Services,Industrial Goods and Services
 TOM,TomTom,Technology,Technology
+TOM,Tomra,Industrial Goods and Services,Industrial Goods and Services
 TPG,Telecom Plus,Telecommunications,Telecommunications
 TPK,Travis Perkins,Retail,Retail
 TREL B,Trelleborg,Industrial Goods and Services,Industrial Goods and Services
@@ -491,11 +429,9 @@ UBSG,UBS Group,Banks,Banks
 UC,UniCredit,Banks,Banks
 UHR,Swatch Group,Consumer Products and Services,Consumer Products and Services
 ULVR,Unilever,"Personal Care, Drug and Grocery Stores","Personal Care, Drug and Grocery Stores"
-ULVR,Unilever,"Personal Care, Drug and Grocery Stores","Personal Care, Drug and Grocery Stores"
 UMG,Universal Music Group,Media,Media
 UMI,Umicore,Chemicals,Chemicals
 UN01,Uniper,Utilities,Utilities
-UPM,UPM-Kymmene,Basic Resources,Basic Resources
 UPM,UPM-Kymmene,Basic Resources,Basic Resources
 UPW,United Utilities,Utilities,Utilities
 URW,Unibail-Rodamco-Westfield,Real Estate,Real Estate
@@ -510,13 +446,10 @@ VIE,Veolia,Utilities,Utilities
 VIG,Vienna Insurance Group,Insurance,Insurance
 VITR,Vitrolife,Health Care,Health Care
 VIV,Vivendi,Media,Media
-VIV,Vivendi,Media,Media
 VK,Vallourec,Basic Resources,Basic Resources
 VNA,Vonovia,Real Estate,Real Estate
-VOD,Vodafone Group,Telecommunications,Telecommunications
 VOD,Vodafone,Telecommunications,Telecommunications
 VOE,Voestalpine,Basic Resources,Basic Resources
-VOLV B,Volvo Group,Industrial Goods and Services,Industrial Goods and Services
 VOLV B,Volvo Group,Industrial Goods and Services,Industrial Goods and Services
 VPK,Vopak,Industrial Goods and Services,Industrial Goods and Services
 VPLAY B,Viaplay,Media,Media

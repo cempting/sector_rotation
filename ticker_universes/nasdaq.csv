@@ -9,7 +9,10 @@ AACIW,Armada Acquisition Corp. I Warrant,Financials,Diversified Financial Servic
 AACO,Abony Acquisition Corp. I Class A Ordinary Share,undefined,undefined
 AACOU,Abony Acquisition Corp. I Units,undefined,undefined
 AACOW,Abony Acquisition Corp. I Warrants,undefined,undefined
+AACP,Apogee Acquisition Corp Class A Ordinary Shares,undefined,undefined
+AACPR,Apogee Acquisition Corp Rights,undefined,undefined
 AACPU,Apogee Acquisition Corp Units,Financials,Diversified Financial Services
+AACPW,Apogee Acquisition Corp Warrant,undefined,undefined
 AACQ,Artius Acquisition Inc.,undefined,undefined
 AACQU,Artius Acquisition Inc.,undefined,undefined
 AACQW,Artius Acquisition Inc.,undefined,undefined
@@ -81,7 +84,9 @@ ACET,"Adicet Bio, Inc.",Health Care,Biotechnology
 ACEV,ACE Convergence Acquisition Corp.,Financials,Diversified Financial Services
 ACEVU,ACE Convergence Acquisition Corp.,Financials,Diversified Financial Services
 ACEVW,ACE Convergence Acquisition Corp.,Financials,Diversified Financial Services
+ACGC,ACP Holdings Acquisition Corp. Class A Ordinary Shares,undefined,undefined
 ACGCU,ACP Holdings Acquisition Corp. Units,Financials,Diversified Financial Services
+ACGCW,ACP Holdings Acquisition Corp. Warrants,undefined,undefined
 ACGL,Arch Capital Group Ltd.,Financials,Insurance
 ACGLN,Arch Capital Group Ltd. Depositary Shares each Representing a 1/1000th Interest in a 4.550% Non-Cumulative Preferred Share Series G,Financials,Insurance
 ACGLO,Arch Capital Group Ltd.,Financials,Insurance
@@ -200,6 +205,7 @@ AERI,"Aerie Pharmaceuticals, Inc.",Health Care,Pharmaceuticals
 AERT,Aeries Technology Inc. Class A Ordinary Share,Financials,undefined
 AERTW,Aeries Technology Inc. Warrant,Financials,Diversified Financial Services
 AESE,Allied Esports Entertainment Inc.,Communication Services,Entertainment
+AESPU,Aeon Acquisition I Corp. Units,undefined,undefined
 AEVAW,Aeva Technologies Inc. Warrants,Consumer Discretionary,Auto Components
 AEY,"ADDvantage Technologies Group, Inc.",Information Technology,"Electronic Equipment, Instruments & Components"
 AEYE,"AudioEye, Inc.",Information Technology,Software
@@ -276,6 +282,7 @@ AIBBR,AIB Acquisition Corporation Right,Financials,Diversified Financial Service
 AIBBU,AIB Acquisition Corporation Unit,Financials,Diversified Financial Services
 AIDX,20/20 Biolabs Inc. Common Stock,Health Care,Biotechnology
 AIEV,Thunder Power Holdings Inc. Common Stock,Financials,Diversified Financial Services
+AIFA,All In FutureTech Alliance Inc. Common Stock,Consumer Discretionary,"Hotels, Restaurants & Leisure"
 AIFC,AI Financial Corporation Common Stock,Financials,Consumer Finance
 AIFE,Aifeex Nexus Acquisition Corporation Class A Ordinary Shares,undefined,undefined
 AIFER,Aifeex Nexus Acquisition Corporation Right,undefined,undefined
@@ -528,6 +535,7 @@ APLMW,Apollomics Inc. Warrant,Financials,Diversified Financial Services
 APLS,"Apellis Pharmaceuticals, Inc.",Health Care,Biotechnology
 APLT,"APPLIED THERAPEUTICS, INC.",Health Care,Biotechnology
 APM,Aptorum Group Limited,Health Care,Biotechnology
+APMCU,AmperCap Acquisition Company Unit,undefined,undefined
 APMI,AxonPrime Infrastructure Acquisition Corporation Class A Common Stock,Financials,Diversified Financial Services
 APMIU,AxonPrime Infrastructure Acquisition Corporation Unit,Financials,Diversified Financial Services
 APMIW,AxonPrime Infrastructure Acquisition Corporation Warrants,Financials,Diversified Financial Services
@@ -581,7 +589,10 @@ ARCE,Arco Platform Limited,Consumer Staples,Household Products
 ARCI,Archimedes Tech SPAC Partners III Co. Ordinary Share,undefined,undefined
 ARCIU,Archimedes Tech SPAC Partners III Co. Units,undefined,undefined
 ARCIW,Archimedes Tech SPAC Partners III Co. Warrant,undefined,undefined
+ARCL,ARC Group Acquisition I Corp Class A Ordinary Shares,undefined,undefined
+ARCLR,ARC Group Acquisition I Corp Right,undefined,undefined
 ARCLU,ARC Group Acquisition I Corp Unit,Financials,Diversified Financial Services
+ARCLW,ARC Group Acquisition I Corp Warrants,undefined,undefined
 ARCT,Arcturus Therapeutics Holdings Inc.,Health Care,Biotechnology
 ARDS,"Aridis Pharmaceuticals, Inc.",Health Care,Biotechnology
 ARDX,"Ardelyx, Inc.",Health Care,Biotechnology
@@ -961,6 +972,7 @@ BHTG,"BioHiTech Global, Inc.",Industrials,Construction & Engineering
 BIAF,bioAffinity Technologies Inc. Common Stock,Health Care,Biotechnology
 BIAFW,bioAffinity Technologies Inc. Warrant,Health Care,Biotechnology
 BIDU,"Baidu, Inc.",Communication Services,Diversified Telecommunication Services
+BIDWU,Tribeca Strategic Acquisition Corp. Unit,undefined,undefined
 BIGC,"BigCommerce Holdings, Inc.",Information Technology,Software
 BIIB,Biogen Inc.,Health Care,Pharmaceuticals
 BILI,Bilibili Inc. Class Z,Communication Services,Interactive Media & Services
@@ -1353,6 +1365,9 @@ CCAI,Cascadia Acquisition Corp. Class A Common Stock,Financials,Diversified Fina
 CCAIU,Cascadia Acquisition Corp. Unit,Financials,Diversified Financial Services
 CCAIW,Cascadia Acquisition Corp. Warrant,Financials,Diversified Financial Services
 CCAP,"Crescent Capital BDC, Inc.",Financials,Capital Markets
+CCAQ,Collective Acquisition Corp. Class A Ordinary Shares,Financials,Diversified Financial Services
+CCAQU,Collective Acquisition Corp. Units,Financials,Diversified Financial Services
+CCAQW,Collective Acquisition Corp. Warrants,Financials,Diversified Financial Services
 CCB,Coastal Financial Corporation,Financials,Banks
 CCBG,City Bank,Financials,Banks
 CCC,CCC Intelligent Solutions Holdings Inc. Common Stock,Information Technology,Software
@@ -2705,6 +2720,7 @@ FNVTU,Finnovate Acquisition Corp. Units,Financials,Diversified Financial Service
 FNVTW,Finnovate Acquisition Corp. Warrants,Financials,Diversified Financial Services
 FNWB,First Northwest Bancorp,Financials,Banks
 FNWD,Finward Bancorp Common Stock,Financials,Banks
+FOCL,EDAP TMS S.A. American Depositary Shares,undefined,undefined
 FOCS,FOCUS FINANCIAL PARTNERS INC.,Financials,Capital Markets
 FOFO,Hang Feng Technology Innovation Co. Ltd. Ordinary Shares,undefined,undefined
 FOLD,"Amicus Therapeutics, Inc.",Health Care,Biotechnology
@@ -3349,6 +3365,8 @@ HCVIU,Hennessy Capital Investment Corp. VI Unit,Financials,Diversified Financial
 HCVIW,Hennessy Capital Investment Corp. VI Warrant,Financials,Diversified Financial Services
 HCWB,HCW Biologics Inc. Common Stock,Health Care,Biotechnology
 HDL,SUPER HI INTERNATIONAL HOLDING LTD. American Depositary Shares,Consumer Discretionary,undefined
+HDRN,Hadron Energy Inc. Common Stock  ,Utilities,Electric Utilities
+HDRNW,Hadron Energy Inc. Warrant,Utilities,Electric Utilities
 HDSN,"Hudson Technologies, Inc.",Materials,Chemicals
 HEAR,Turtle Beach Corporation,Information Technology,"Electronic Equipment, Instruments & Components"
 HEC,Hudson Executive Investment Corp.,Financials,Diversified Financial Services
@@ -3561,6 +3579,7 @@ HYMCW,Hycroft Mining Holding Corporation,Materials,Metals & Mining
 HYMCZ,Hycroft Mining Holding Corporation,Materials,Metals & Mining
 HYNE,Hoyne Bancorp Inc. Common Stock,Financials,Banks
 HYPD,Hyperion DeFi Inc. Common Stock,undefined,undefined
+HYPG,Grayscale Hyperliquid Staking ETF Common Units of fractional undivided beneficial interest,undefined,undefined
 HYPR,Hyperfine Inc. Class A Common Stock,Health Care,Biotechnology
 HYRE,HyreCar Inc.,Industrials,Commercial Services & Supplies
 HYW,Hywin Holdings Ltd.,Financials,Capital Markets
@@ -3724,6 +3743,7 @@ INFI,"Infinity Pharmaceuticals, Inc.",Health Care,Biotechnology
 INFN,INFINERA CORPORATION,Information Technology,Communications Equipment
 INGN,"Inogen, Inc.",Health Care,Health Care Technology
 INHD,Inno Holdings Inc. Common Stock,undefined,undefined
+INIO,INNIO N.V. Ordinary Shares,Energy,Energy Equipment & Services
 INKA,KludeIn I Acquisition Corp.,Financials,Diversified Financial Services
 INKAU,KludeIn I Acquisition Corp.,Financials,Diversified Financial Services
 INKAW,KludeIn I Acquisition Corp.,Financials,Diversified Financial Services
@@ -3791,6 +3811,7 @@ IPST,Heritage Distilling Holding Company Inc. Common Stock,Consumer Staples,Beve
 IPVI,InterPrivate IV InfraTech Partners Inc.,Financials,Diversified Financial Services
 IPVIU,InterPrivate IV InfraTech Partners Inc.,Financials,Diversified Financial Services
 IPVIW,InterPrivate IV InfraTech Partners Inc.,Financials,Diversified Financial Services
+IPVVU,InterPrivate Investment Partners V Inc. Units,Financials,Diversified Financial Services
 IPW,iPower Inc. Common Stock,Consumer Discretionary,Internet & Direct Marketing Retail
 IPWR,Ideal Power Inc.,Industrials,Electrical Equipment
 IPX,IperionX Limited American Depositary Share,Industrials,Professional Services
@@ -4011,6 +4032,7 @@ KELYB,"Kelly Services, Inc.",Industrials,Professional Services
 KEQU,Kewaunee Scientific Corporation,Consumer Discretionary,Household Durables
 KERN,Akerna Corp.,Health Care,Health Care Providers & Services
 KERNW,Akerna Corp.,Health Care,Health Care Providers & Services
+KEYYU,Keystone Acquisition Corp. Unit,undefined,undefined
 KFFB,Kentucky First Federal Bancorp,Financials,Banks
 KFII,K&F Growth Acquisition Corp. II Class A Ordinary shares,undefined,undefined
 KFIIR,K&F Growth Acquisition Corp. II Rights,undefined,undefined
@@ -4232,6 +4254,7 @@ LFMD,"LifeMD, Inc.",Health Care,Pharmaceuticals
 LFMDP,LifeMD Inc. 8.875% Series A Cumulative Perpetual Preferred Stock,Industrials,Professional Services
 LFS,LEIFRAS Co. Ltd. American Depositary Shares  ,Consumer Staples,Household Products
 LFST,LifeStance Health Group Inc. Common Stock,Health Care,Health Care Equipment & Supplies
+LFTO,Liftoff Mobile Inc. Common Stock,Information Technology,Software
 LFTR,Lefteris Acquisition Corp.,Financials,Diversified Financial Services
 LFTRU,Lefteris Acquisition Corp.,Financials,Diversified Financial Services
 LFTRW,Lefteris Acquisition Corp.,Financials,Diversified Financial Services
@@ -4281,8 +4304,11 @@ LIFWW,MSP Recovery Inc. Warrant,Information Technology,Software
 LIFWZ,MSP Recovery Inc. Warrant,Information Technology,Software
 LILA,Liberty Latin America Ltd.,Communication Services,Diversified Telecommunication Services
 LILAK,Liberty Latin America Ltd.,Communication Services,Diversified Telecommunication Services
+LILAV,Liberty Latin America Ltd Class A Common Stock Ex-Distribution When Issued,undefined,undefined
+LILKV,Liberty Latin America Ltd Class C Common Stock Ex-Distribution When Issued,undefined,undefined
 LILM,Lilium N.V. Class A Ordinary Shares,Industrials,Aerospace & Defense
 LILMW,Lilium N.V. Warrants,Industrials,Aerospace & Defense
+LILPV,Liberty Latin America Ltd. 9.0% Fixed Rate Cumulative Perpetual Redeemable Series A Preference Shares,Communication Services,Entertainment
 LIMN,Liminatus Pharma Inc. Class A Common Stock,undefined,undefined
 LIMNW,Liminatus Pharma Inc. Warrants,undefined,undefined
 LINC,Lincoln Educational Services Corporation,Consumer Staples,Household Products
@@ -4417,6 +4443,7 @@ LTBR,Lightbridge Corporation,Industrials,Electrical Equipment
 LTCC,Canary Capital Group LLC Canary Litecoin ETF,Financials,Capital Markets
 LTCH,Latch Inc. Common Stock,Information Technology,Software
 LTCHW,Latch Inc. Warrant expiring 6/4/2026,Information Technology,Software
+LTGRU,Long Table Growth Corp. Units,Financials,Diversified Financial Services
 LTRN,Lantern Pharma Inc.,Health Care,Biotechnology
 LTRPA,"Liberty TripAdvisor Holdings, Inc.",Communication Services,Diversified Telecommunication Services
 LTRPB,"Liberty TripAdvisor Holdings, Inc.",Communication Services,Diversified Telecommunication Services
@@ -5277,6 +5304,7 @@ OCSAW,Oculis Holding AG Warrants,Health Care,Biotechnology
 OCSI,Oaktree Strategic Income Corporation,Financials,undefined
 OCSL,Oaktree Specialty Lending Corporation,Financials,Consumer Finance
 OCTO,Eightco Holdings Inc. Common Stock,Consumer Staples,undefined
+OCTV,Octave Intelligence plc Class B Ordinary Shares,undefined,undefined
 OCTVV,Octave Intelligence plc Class B Ordinary Shares When Issued,Information Technology,Software
 OCUL,"Ocular Therapeutix, Inc.",Health Care,Biotechnology
 OCUP,"Ocuphire Pharma, Inc.",Health Care,Biotechnology
@@ -5307,6 +5335,8 @@ OGI,OrganiGram Holdings Inc.,Health Care,Pharmaceuticals
 OHAA,OPY Acquisition Corp. I Class A Common Stock,Financials,Diversified Financial Services
 OHAAU,OPY Acquisition Corp. I Units,Financials,Diversified Financial Services
 OHAAW,OPY Acquisition Corp. I Warrant,Financials,Diversified Financial Services
+OHAC,Oceanhawk Acquisition Corp. Class A Ordinary Shares,undefined,undefined
+OHACR,Oceanhawk Acquisition Corp. Rights,undefined,undefined
 OHACU,Oceanhawk Acquisition Corp. Units,undefined,undefined
 OHPA,Orion Acquisition Corp.,Financials,Diversified Financial Services
 OHPAU,Orion Acquisition Corp.,Financials,Diversified Financial Services
@@ -5551,6 +5581,7 @@ PBCTP,"People's United Financial, Inc.",Financials,Banks
 PBFS,"Pioneer Bancorp, Inc.",undefined,undefined
 PBHC,"Pathfinder Bancorp, Inc.",Financials,Banks
 PBIP,"Prudential Bancorp, Inc.",Financials,Banks
+PBK,PowerBank Corporation Common Stock,undefined,undefined
 PBLA,"Panbela Therapeutics, Inc.",Health Care,Biotechnology
 PBM,Psyence Biomedical Ltd. Common Shares,Health Care,undefined
 PBMWW,Psyence Biomedical Ltd. Warrant,Health Care,undefined
@@ -5593,7 +5624,10 @@ PDYN,Palladyne AI Corp. Common Stock,Industrials,Building Products
 PDYNW,Palladyne AI Corp Warrants,Industrials,Building Products
 PEBK,Peoples Bancorp,Financials,Banks
 PEBO,Peoples Bancorp,Financials,Banks
+PECE,Peace Acquisition Corp Ordinary Shares,Financials,Diversified Financial Services
+PECER,Peace Acquisition Corp Right,Financials,Diversified Financial Services
 PECEU,Peace Acquisition Corp Units,Financials,Diversified Financial Services
+PECEW,Peace Acquisition Corp Warrant,Financials,Diversified Financial Services
 PECO,Phillips Edison & Company Inc. Common Stock,Real Estate,Equity Real Estate Investment Trusts (REITs)
 PEGA,Pegasystems Inc.,Information Technology,Software
 PEGR,Project Energy Reimagined Acquisition Corp. Class A Ordinary Share,Financials,Diversified Financial Services
@@ -5784,6 +5818,7 @@ PPHPR,PHP Ventures Acquisition Corp. Rights,Financials,Diversified Financial Ser
 PPHPU,PHP Ventures Acquisition Corp. Units,Financials,Diversified Financial Services
 PPHPW,PHP Ventures Acquisition Corp. Warrants,Financials,Diversified Financial Services
 PPIH,"Perma-Pipe International Holdings, Inc.",Industrials,Building Products
+PPLI,People Incorporated Common Stock,Communication Services,Diversified Telecommunication Services
 PPSI,"Pioneer Power Solutions, Inc.",undefined,undefined
 PPTA,Perpetua Resources Corp.,Materials,Metals & Mining
 PPYA,Papaya Growth Opportunity Corp. I Class A Common Stock,Financials,Diversified Financial Services
@@ -5905,6 +5940,7 @@ PWFL,"PowerFleet, Inc.",Information Technology,Communications Equipment
 PWM,Prestige Wealth Inc. Ordinary Shares,Materials,undefined
 PWOD,"Penns Woods Bancorp, Inc.",Financials,Banks
 PWP,Perella Weinberg Partners Class A Common Stock,Financials,Capital Markets
+PWRL,Powerlaw Corp. Common Stock,undefined,undefined
 PWUP,PowerUp Acquisition Corp. Class A Ordinary Shares,Financials,Diversified Financial Services
 PWUPU,PowerUp Acquisition Corp. Unit,Financials,Diversified Financial Services
 PWUPW,PowerUp Acquisition Corp. Warrant,Financials,Diversified Financial Services
@@ -5951,6 +5987,7 @@ QMMM,QMMM Holdings Limited Ordinary Shares,Real Estate,undefined
 QNCX,Quince Therapeutics Inc. Common Stock,Health Care,Biotechnology
 QNRX,Quoin Pharmaceuticals Ltd. American Depositary Shares,Health Care,Health Care Technology
 QNST,"QuinStreet, Inc.",Communication Services,Diversified Telecommunication Services
+QNT,Quantinuum Inc. Class A Common Stock,Information Technology,Software
 QNTM,Quantum Biopharma Ltd. Class B Subordinate Voting Shares,Health Care,Biotechnology
 QOMO,Qomolangma Acquisition Corp. Common Stock,Financials,Diversified Financial Services
 QOMOR,Qomolangma Acquisition Corp. Right,Financials,Diversified Financial Services
@@ -6149,6 +6186,7 @@ RIVN,Rivian Automotive Inc. Class A Common Stock,Consumer Discretionary,Automobi
 RJET,Republic Airways Holdings Inc. Common Stock,undefined,undefined
 RKDA,"Arcadia Biosciences, Inc.",Materials,Construction Materials
 RKLB,Rocket Lab USA Inc. Common Stock,Industrials,Aerospace & Defense
+RKTO,Rocket One Inc. Common Stock,undefined,undefined
 RLAY,"Relay Therapeutics, Inc.",Health Care,Biotechnology
 RLMD,Relmada Therapeutics Inc,Health Care,Pharmaceuticals
 RLYB,Rallybio Corporation Common Stock,Health Care,Biotechnology
@@ -7427,6 +7465,7 @@ VAXX,Vaxxinity Inc. Class A Common Stock,Health Care,Biotechnology
 VBFC,Village Bank and Trust Financial Corp.,Financials,Banks
 VBIV,VBI Vaccines Inc.,Health Care,Biotechnology
 VBLT,Vascular Biogenics Ltd.,Health Care,Biotechnology
+VBNB,VanEck BNB ETF Common Shares of Beneficial Interest,undefined,undefined
 VBNK,VersaBank Common Shares,Financials,undefined
 VBOC,Viscogliosi Brothers Acquisition Corp Common Stock,Financials,Diversified Financial Services
 VBOCU,Viscogliosi Brothers Acquisition Corp Unit,Financials,Diversified Financial Services

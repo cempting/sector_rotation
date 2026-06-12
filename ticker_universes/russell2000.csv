@@ -1,6 +1,7 @@
 Ticker,Name,Sector,Industry
 --,OMNIAB INC $15.00 VESTING Prvt,Health Care,undefined
 --,ARCELLX INC CVR,Health Care,undefined
+--,NEXPOINT DIVERSIFIED REAL ESTATE T,Real Estate,undefined
 --,OMNIAB INC $12.50 VESTING Prvt,Health Care,undefined
 AAMI,ACADIAN ASSET MANAGEMENT INC,Financials,Capital Markets
 AAOI,APPLIED OPTOELECTRONICS INC,Information Technology,Semiconductors & Semiconductor Equipment
@@ -43,8 +44,8 @@ ADEA,ADEIA INC,Information Technology,Software
 ADMA,ADMA BIOLOGICS INC,Health Care,Biotechnology
 ADNT,ADIENT PLC,Consumer Discretionary,Auto Components
 ADPT,ADAPTIVE BIOTECHNOLOGIES CORP,Health Care,Biotechnology
-ADRO,CHINOOK THERAPEUTICS INC,Health Care,undefined
 ADRO,CHINOOK THERAPEUTICS INC CVR,Health Care,undefined
+ADRO,CHINOOK THERAPEUTICS INC,Health Care,undefined
 ADTN,ADTRAN HOLDINGS INC,Information Technology,Communications Equipment
 ADUS,ADDUS HOMECARE CORP,Health Care,Health Care Equipment & Supplies
 ADV,ADVANTAGE SOLUTIONS INC CLASS A,Communication,Diversified Telecommunication Services
@@ -116,7 +117,6 @@ AMRX,AMNEAL PHARMACEUTICALS INC CLASS A,Health Care,Pharmaceuticals
 AMSC,AMERICAN SUPERCONDUCTOR CORP,Industrials,Machinery
 AMSF,AMERISAFE INC,Financials,Insurance
 AMTB,AMERANT BANCORP INC CLASS A,Financials,Banks
-AMWD,AMERICAN WOODMARK CORP,Industrials,Household Durables
 ANAB,ANAPTYSBIO INC,Health Care,Biotechnology
 ANDE,ANDERSONS INC,Consumer Staples,Food & Staples Retailing
 ANF,ABERCROMBIE AND FITCH CLASS A,Consumer Discretionary,"Textiles, Apparel & Luxury Goods"
@@ -354,7 +354,7 @@ CCOI,COGENT COMMUNICATIONS HOLDINGS INC,Communication,Diversified Telecommunicat
 CCRN,CROSS COUNTRY HEALTHCARE INC,Health Care,Professional Services
 CCS,CENTURY COMMUNITIES INC,Consumer Discretionary,Construction & Engineering
 CCSI,CONSENSUS CLOUD SOLUTIONS INC,Information Technology,Software
-CD,CHAINCE DIGITAL HOLDINGS INC,Information Technology,IT Services
+CD,CHAINCE DIGITAL HOLDINGS INC,Financials,IT Services
 CDE,COEUR MINING INC,Materials,Metals & Mining
 CDNA,CAREDX INC,Health Care,Biotechnology
 CDNL,CARDINAL INFRASTRUCTURE GROUP INC,Industrials,undefined
@@ -478,7 +478,6 @@ CURV,TORRID HOLDINGS INC,Consumer Discretionary,"Textiles, Apparel & Luxury Good
 CV,CAPSOVISION INC,Health Care,Health Care Technology
 CVBF,CVB FINANCIAL CORP,Financials,Banks
 CVCO,CAVCO INDUSTRIES INC,Consumer Discretionary,Construction & Engineering
-CVGW,CALAVO GROWERS INC,Consumer Staples,Food & Staples Retailing
 CVI,CVR ENERGY INC,Energy,"Oil, Gas & Consumable Fuels"
 CVLG,COVENANT LOGISTICS GROUP INC CLASS,Industrials,Transportation Infrastructure
 CVLT,COMMVAULT SYSTEMS INC,Information Technology,Software
@@ -510,7 +509,7 @@ DC,DAKOTA GOLD CORP,Materials,Metals & Mining
 DCGO,DOCGO INC,Health Care,Health Care Providers & Services
 DCH,DAUCH CORPORATION,Consumer Discretionary,Auto Components
 DCO,DUCOMMUN INC,Industrials,Aerospace & Defense
-DCOM,DIME COMMUNITY BANCSHARES INC,Financials,Banks
+DCOM,DIME COMMERCIAL BANCSHARES INC,Financials,Banks
 DCTH,DELCATH SYS INC,Health Care,Health Care Technology
 DDD,3D SYSTEMS CORP,Industrials,"Technology Hardware, Storage & Peripherals"
 DEA,EASTERLY GOVERNMENT PROPERTIES INC,Real Estate,Equity Real Estate Investment Trusts (REITs)
@@ -531,7 +530,7 @@ DJCO,DAILY JOURNAL CORP,Information Technology,Diversified Telecommunication Ser
 DK,DELEK US HOLDINGS INC,Energy,"Oil, Gas & Consumable Fuels"
 DLX,DELUXE CORP,Industrials,Diversified Telecommunication Services
 DMAC,DIAMEDICA THERAPEUTICS INC,Health Care,Biotechnology
-DMRC,DIGIMARC PARENT,Information Technology,IT Services
+DMRC,DIGIMARC,Information Technology,IT Services
 DNA,GINKGO BIOWORKS HOLDINGS INC CLASS,Health Care,Biotechnology
 DNLI,DENALI THERAPEUTICS INC,Health Care,Biotechnology
 DNOW,DNOW INC,Industrials,Energy Equipment & Services
@@ -641,7 +640,7 @@ FCFS,FIRSTCASH HOLDINGS INC,Financials,Consumer Finance
 FCPT,FOUR CORNERS PROPERTY INC TRUST,Real Estate,Equity Real Estate Investment Trusts (REITs)
 FDBC,FIDELITY D AND D BANCORP INC,Financials,Banks
 FDMT,4D MOLECULAR THERAPEUTICS INC,Health Care,Biotechnology
-FDP,FRESH DEL MONTE PRODUCE INC,Consumer Staples,Household Products
+FDP,DEL MONTE CORP,Consumer Staples,Household Products
 FEIM,FREQUENCY ELECTRONICS INC,Information Technology,Communications Equipment
 FELE,FRANKLIN ELECTRIC INC,Industrials,Machinery
 FENC,FENNEC PHARMACEUTICALS INC,Health Care,Biotechnology
@@ -649,7 +648,6 @@ FET,FORUM ENERGY TECHNOLOGIES INC,Energy,Energy Equipment & Services
 FF,FUTUREFUEL CORP,Energy,Chemicals
 FFAI,FARADAY FUTURE INTELLIGENT ELECTRI,Consumer Discretionary,undefined
 FFBC,FIRST FINANCIAL BANCORP,Financials,Banks
-FFIC,FLUSHING FINANCIAL CORP,Financials,Banks
 FFIN,FIRST FINANCIAL BANKSHARES INC,Financials,Banks
 FG,F&G ANNUITIES AND LIFE INC,Financials,Insurance
 FHTX,FOGHORN THERAPEUTICS INC,Health Care,Biotechnology
@@ -750,7 +748,6 @@ GNK,GENCO SHIPPING AND TRADING LTD,Industrials,Marine
 GNL,GLOBAL NET LEASE INC,Real Estate,Equity Real Estate Investment Trusts (REITs)
 GNW,GENWORTH FINANCIAL INC,Financials,Insurance
 GO,GROCERY OUTLET HOLDING CORP,Consumer Staples,Food & Staples Retailing
-GOCO,GOHEALTH INC CLASS A,Financials,Insurance
 GOGO,GOGO INC,Communication,Diversified Telecommunication Services
 GOLD,GOLD INC,Consumer Discretionary,Metals & Mining
 GOLF,ACUSHNET HOLDINGS CORP,Consumer Discretionary,"Hotels, Restaurants & Leisure"
@@ -935,7 +932,6 @@ JXN,JACKSON FINANCIAL INC CLASS A,Financials,Insurance
 JYNT,JOINT CORP,Health Care,Health Care Equipment & Supplies
 KAI,KADANT INC,Industrials,Machinery
 KALU,KAISER ALUMINIUM CORP,Materials,Metals & Mining
-KALV,KALVISTA PHARMACEUTICALS INC,Health Care,Biotechnology
 KBH,KB HOME,Consumer Discretionary,Construction & Engineering
 KE,KIMBALL ELECTRONICS INC,Information Technology,Electrical Equipment
 KELYA,KELLY SERVICES INC CLASS A,Industrials,Professional Services
@@ -994,7 +990,7 @@ LCNB,LCNB CORP,Financials,Banks
 LDI,LOANDEPOT INC CLASS A,Financials,Thrifts & Mortgage Finance
 LE,LAND END INC,Consumer Discretionary,Specialty Retail
 LEG,LEGGETT & PLATT INC,Consumer Discretionary,Household Durables
-LEGH,LEGACY HOUSING,Consumer Discretionary,Construction & Engineering
+LEGH,LEGACY HOUSING CORP,Consumer Discretionary,Construction & Engineering
 LENZ,LENZ THERAPEUTICS INC,Health Care,undefined
 LEU,CENTRUS ENERGY CORP CLASS A,Energy,Metals & Mining
 LFCR,LIFECORE BIOMEDICAL INC,Health Care,Biotechnology
@@ -1185,7 +1181,7 @@ NIC,NICOLET BANKSHARES INC,Financials,Banks
 NJR,NEW JERSEY RESOURCES CORP,Utilities,Gas Utilities
 NKSH,NATIONAL BANKSHARES INC,Financials,Banks
 NKTX,NKARTA INC,Health Care,Biotechnology
-NL,NL INDUSTRIES INC,Industrials,Professional Services
+NL,NLI HOLDINGS INC,Industrials,Professional Services
 NLOP,NET LEASE OFFICE PROPERTIES,Real Estate,undefined
 NMAX,NEWSMAX INC CLASS B,Communication,Media
 NMIH,NMI HOLDINGS INC,Financials,Insurance
@@ -1637,7 +1633,6 @@ STNG,SCORPIO TANKERS INC,Energy,"Oil, Gas & Consumable Fuels"
 STOK,STOKE THERAPEUTICS INC,Health Care,Biotechnology
 STRA,STRATEGIC EDUCATION INC,Consumer Discretionary,Household Products
 STRL,STERLING INFRASTRUCTURE INC,Industrials,Construction & Engineering
-STRS,STRATUS PROPERTIES INC,Real Estate,Real Estate Management & Development
 STRT,STRATTEC SECURITY CORP,Consumer Discretionary,Auto Components
 STRW,STRAWBERRY FIELDS REIT INC,Real Estate,Equity Real Estate Investment Trusts (REITs)
 STRZ,STARZ ENTERTAINMENT CORP,Communication,"Hotels, Restaurants & Leisure"
@@ -1688,10 +1683,9 @@ TGLS,TECNOGLASS INC,Industrials,Building Products
 TGTX,TG THERAPEUTICS INC,Health Care,Biotechnology
 TH,TARGET HOSPITALITY CORP,Consumer Discretionary,Energy Equipment & Services
 THFF,FIRST FINANCIAL CORPORATION CORP,Financials,Banks
-THR,THERMON GROUP HOLDINGS INC,Industrials,Machinery
 THRD,THIRD HARMONIC BIO INC,Health Care,Biotechnology
 THRM,GENTHERM INC,Consumer Discretionary,Auto Components
-THRY,THRYV HOLDINGS INC,Communication,Diversified Telecommunication Services
+THRY,THRYV HOLDINGS INC,Information Technology,Diversified Telecommunication Services
 TIC,TIC SOLUTIONS INC,Industrials,undefined
 TILE,INTERFACE INC,Industrials,Household Durables
 TIPT,TIPTREE INC,Financials,Insurance
@@ -1732,7 +1726,7 @@ TRTX,TPG RE FINANCE TRUST INC,Financials,Equity Real Estate Investment Trusts (R
 TRUP,TRUPANION INC,Financials,Insurance
 TRVI,TREVI THERAPEUTICS INC,Health Care,Biotechnology
 TSBK,TIMBERLAND BANCORP INC,Financials,Banks
-TSEOF,TRINSEO PLC,Materials,undefined
+TSEOQ,TRINSEO PLC,Materials,undefined
 TSHA,TAYSHA GENE THERAPIES INC,Health Care,Biotechnology
 TSSI,TSS INC,Information Technology,IT Services
 TTAM,TITAN AMERICA SA,Materials,undefined
@@ -1821,18 +1815,17 @@ VOXR,VOX ROYALTY CORP,Materials,undefined
 VOYG,VOYAGER TECHNOLOGIES INC CLASS A,Industrials,Aerospace & Defense
 VPG,VISHAY PRECISION GROUP INC,Information Technology,"Electronic Equipment, Instruments & Components"
 VRDN,VIRIDIAN THERAPEUTICS ORS INC,Health Care,Biotechnology
-VRE,VERIS RESIDENTIAL INC,Real Estate,Equity Real Estate Investment Trusts (REITs)
 VREX,VAREX IMAGING CORP,Health Care,Health Care Technology
 VRM,VROOM INC,Financials,Automobiles
 VRNS,VARONIS SYSTEMS INC,Information Technology,Software
 VRRM,VERRA MOBILITY CORP CLASS A,Industrials,Professional Services
 VRTS,VIRTUS INVESTMENT PARTNERS INC,Financials,Capital Markets
 VSAT,VIASAT INC,Information Technology,Communications Equipment
-VSCO,VICTORIA S SECRET,Consumer Discretionary,undefined
 VSEC,VSE CORP,Industrials,Aerospace & Defense
 VSH,VISHAY INTERTECHNOLOGY INC,Information Technology,Semiconductors & Semiconductor Equipment
 VSTM,VERASTEM INC,Health Care,Software
 VSTS,VESTIS CORP,Industrials,undefined
+VSXY,VICTORIA S SECRET,Consumer Discretionary,"Textiles, Apparel & Luxury Goods"
 VTEX,VTEX CLASS A,Information Technology,Software
 VTOL,BRISTOW GROUP INC,Energy,Energy Equipment & Services
 VTS,VITESSE ENERGY INC,Energy,"Oil, Gas & Consumable Fuels"
