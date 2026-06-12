@@ -38,7 +38,7 @@ def test_feature_registry_instantiates_builtin_routes():
 
         routes = FeatureRegistry.list_routes()
 
-        assert routes == ["favorites", "search", "sector_industry_stocks", "suggestions"]
+        assert routes == ["CopyTrading", "favorites", "search", "sector_industry_stocks", "strategies", "suggestions"]
         for route in routes:
             feature = FeatureRegistry.get_feature(route)
             assert feature.get_route_name() == route

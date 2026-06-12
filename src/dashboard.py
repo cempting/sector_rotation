@@ -7,6 +7,8 @@ from .features import FeatureRegistry
 
 _ROUTE_BY_FEATURE = {
     "browse": "sector_industry_stocks",
+    "CopyTrading": "CopyTrading",
+    "strategies": "strategies",
     "search": "search",
     "favorites": "favorites",
     "suggestions": "suggestions",
@@ -76,7 +78,7 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 
 def _feature_for_view(view: str) -> str:
-    if view in {"favorites", "search", "suggestions", "liquidity"}:
+    if view in {"favorites", "search", "suggestions", "liquidity", "CopyTrading", "strategies"}:
         if view == "liquidity":
             return "suggestions"
         return view
@@ -90,6 +92,10 @@ def _set_view_for_feature(feature: str) -> None:
         st.session_state.view = "search"
     elif feature == "suggestions":
         st.session_state.view = "suggestions"
+    elif feature == "CopyTrading":
+        st.session_state.view = "CopyTrading"
+    elif feature == "strategies":
+        st.session_state.view = "strategies"
     else:
         st.session_state.view = "sector"
 

@@ -6,6 +6,8 @@ Streamlit app for market rotation exploration across stock universes, with featu
 - Search across all universes
 - Favorites management (export/import JSON)
 - Trend and volume suggestions
+- CopyTrading feed for publicly disclosed activity
+- Strategies playbooks inspired by public investors/traders
 
 ## Quick start
 
@@ -62,6 +64,24 @@ The app uses a sticky top navigation bar. Choose a feature first, then use featu
 - Discover industries and stocks with trend + volume filters.
 - Refresh clears cached suggestion computations and reloads relevant tickers.
 
+### CopyTrading
+
+- Browse a feed of publicly disclosed activity from selected funds, private investors, and US politicians.
+- Live connectors pull recent SEC 13F filing activity for tracked managers and congressional transaction feeds when available.
+- Each row includes a source link so filings/disclosures can be opened directly.
+- Filter by participant type, lookback window, and text search.
+- Create a ticker watchlist and get in-app alerts when matching activity appears in the selected alert window.
+- Use as a research aid only; disclosures can be delayed and are not investment advice.
+
+### Strategies
+
+- Review structured strategy outlines inspired by public figures such as Chris Camillo and Felix Prehn.
+- Each strategy includes edge, process, risk controls, and practical execution checklists.
+- Run a strategy-specific agent to generate stock picks from your selected universe.
+- Picks include actionable entry zones, stop zones, and two take-profit targets.
+- Sources are linked so you can read underlying interviews/articles and adapt your own research process.
+- Educational only; this is not investment advice.
+
 ### Data retry behavior
 
 - If a ticker repeatedly returns no data (for example delisted or unavailable symbols), the app marks it as temporarily unavailable.
@@ -109,6 +129,8 @@ sector_rotation/
 |  |  |- search/
 |  |  |- favorites/
 |  |  |- suggestions/
+|  |  |- copy_trading/
+|  |  |- strategies/
 |  |  |- liquidity/
 |  |- charts.py
 |  |- constants.py
